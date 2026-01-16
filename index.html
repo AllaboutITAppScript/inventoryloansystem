@@ -6,6 +6,8 @@
     <title>ระบบยืมคืนออนไลน์</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Google Fonts Kanit -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome Icons -->
@@ -57,6 +59,17 @@
         .btn-danger:hover {
             background-color: #dc2626;
         }
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-warning:hover {
+            background-color: #d97706;
+        }
         .status-borrowed {
             background-color: #f59e0b;
             color: white;
@@ -75,6 +88,22 @@
         }
         .status-overdue {
             background-color: #ef4444;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-pending {
+            background-color: #8b5cf6;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-rejected {
+            background-color: #6b7280;
             color: white;
             padding: 0.25rem 0.5rem;
             border-radius: 9999px;
@@ -100,31 +129,24 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .message {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            z-index: 1000;
-            max-width: 300px;
-            animation: slideIn 0.3s ease-out;
+        .admin-only {
+            border-left: 4px solid #8b5cf6;
         }
-        .message.success {
-            background-color: #10b981;
+        .badge-admin {
+            background-color: #8b5cf6;
             color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
-        .message.error {
-            background-color: #ef4444;
-            color: white;
-        }
-        .message.info {
+        .badge-user {
             background-color: #3b82f6;
             color: white;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -146,8 +168,11 @@
                 <div class="flex items-center space-x-3">
                     <img id="userAvatar" class="w-8 h-8 rounded-full" src="" alt="Profile">
                     <div>
-                        <div id="userName" class="text-sm font-medium"></div>
-                        <div id="userRole" class="text-xs text-gray-300"></div>
+                        <div class="flex items-center space-x-2">
+                            <span id="userName" class="text-sm font-medium"></span>
+                            <span id="userRoleBadge" class="badge-user text-xs"></span>
+                        </div>
+                        <div id="userLineId" class="text-xs text-gray-300"></div>
                     </div>
                     <button onclick="logout()" class="btn-danger text-sm">
                         <i class="fas fa-sign-out-alt mr-1"></i>ออก
@@ -189,6 +214,9 @@
                         <button onclick="showSection('myBorrowings')" class="btn-primary">
                             <i class="fas fa-history mr-2"></i>รายการยืมของฉัน
                         </button>
+                        <button onclick="showSection('adminPanel')" id="adminPanelBtn" class="btn-warning hidden">
+                            <i class="fas fa-users-cog mr-2"></i>จัดการระบบ
+                        </button>
                     </div>
                 </div>
 
@@ -198,7 +226,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-gray-400">สิ่งของทั้งหมด</p>
-                                <p id="totalItems" class="text-3xl font-bold">5</p>
+                                <p id="totalItems" class="text-3xl font-bold">0</p>
                             </div>
                             <i class="fas fa-box text-blue-500 text-2xl"></i>
                         </div>
@@ -207,7 +235,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-gray-400">ว่างสำหรับยืม</p>
-                                <p id="availableItems" class="text-3xl font-bold">28</p>
+                                <p id="availableItems" class="text-3xl font-bold">0</p>
                             </div>
                             <i class="fas fa-check-circle text-green-500 text-2xl"></i>
                         </div>
@@ -224,10 +252,10 @@
                     <div class="card">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-gray-400">ค้างคืน</p>
-                                <p id="overdueItems" class="text-3xl font-bold">0</p>
+                                <p class="text-gray-400">รออนุมัติ</p>
+                                <p id="pendingItems" class="text-3xl font-bold">0</p>
                             </div>
-                            <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                            <i class="fas fa-clock text-purple-500 text-2xl"></i>
                         </div>
                     </div>
                 </div>
@@ -242,16 +270,8 @@
                         <div id="popularItems">
                             <div class="space-y-3">
                                 <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
-                                    <span>หนังสือ Python</span>
-                                    <span class="text-blue-400 font-bold">5 ครั้ง</span>
-                                </div>
-                                <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
-                                    <span>เมาส์ไร้สาย</span>
-                                    <span class="text-blue-400 font-bold">3 ครั้ง</span>
-                                </div>
-                                <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
-                                    <span>Projector</span>
-                                    <span class="text-blue-400 font-bold">2 ครั้ง</span>
+                                    <span>กำลังโหลด...</span>
+                                    <span class="text-blue-400 font-bold">- ครั้ง</span>
                                 </div>
                             </div>
                         </div>
@@ -264,22 +284,10 @@
                         </h3>
                         <div id="quickBorrow">
                             <div class="space-y-3">
-                                <button onclick="quickBorrow('ITM001')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
+                                <button onclick="showSection('browseItems')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
                                     <div class="flex justify-between items-center">
-                                        <span>หนังสือ Python</span>
-                                        <span class="text-green-400">ว่าง 10 ชิ้น</span>
-                                    </div>
-                                </button>
-                                <button onclick="quickBorrow('ITM002')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
-                                    <div class="flex justify-between items-center">
-                                        <span>เมาส์ไร้สาย</span>
-                                        <span class="text-green-400">ว่าง 5 ชิ้น</span>
-                                    </div>
-                                </button>
-                                <button onclick="quickBorrow('ITM004')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
-                                    <div class="flex justify-between items-center">
-                                        <span>Projector</span>
-                                        <span class="text-green-400">ว่าง 2 ชิ้น</span>
+                                        <span>เลือกดูสิ่งของทั้งหมด</span>
+                                        <span class="text-green-400"><i class="fas fa-arrow-right"></i></span>
                                     </div>
                                 </button>
                             </div>
@@ -294,9 +302,14 @@
                     <h2 class="text-2xl font-bold">
                         <i class="fas fa-boxes mr-2"></i>รายการสิ่งของ
                     </h2>
-                    <button onclick="showSection('dashboard')" class="btn-primary">
-                        <i class="fas fa-arrow-left mr-2"></i>กลับหน้าแรก
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="showSection('dashboard')" class="btn-primary">
+                            <i class="fas fa-arrow-left mr-2"></i>กลับหน้าแรก
+                        </button>
+                        <button onclick="loadItems()" class="btn-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>รีเฟรช
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Search and Filter -->
@@ -400,6 +413,100 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Admin Panel Section -->
+            <div id="adminPanel" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">
+                        <i class="fas fa-users-cog mr-2"></i>แผงจัดการระบบ
+                    </h2>
+                    <button onclick="showSection('dashboard')" class="btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>กลับหน้าแรก
+                    </button>
+                </div>
+
+                <!-- Admin Tabs -->
+                <div class="mb-6">
+                    <div class="flex border-b border-gray-700">
+                        <button onclick="showAdminTab('pendingRequests')" 
+                                class="py-3 px-6 font-medium border-b-2 border-purple-500 text-purple-500" 
+                                id="pendingRequestsTab">
+                            <i class="fas fa-clock mr-2"></i>คำขอรออนุมัติ
+                            <span id="pendingCountBadge" class="ml-2 bg-purple-500 text-white rounded-full text-xs px-2 py-1">0</span>
+                        </button>
+                        <button onclick="showAdminTab('manageItems')" 
+                                class="py-3 px-6 font-medium text-gray-400 hover:text-white" 
+                                id="manageItemsTab">
+                            <i class="fas fa-box mr-2"></i>จัดการสิ่งของ
+                        </button>
+                        <button onclick="showAdminTab('manageUsers')" 
+                                class="py-3 px-6 font-medium text-gray-400 hover:text-white" 
+                                id="manageUsersTab">
+                            <i class="fas fa-users mr-2"></i>จัดการผู้ใช้
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pending Requests Tab -->
+                <div id="pendingRequestsTabContent" class="admin-only">
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">คำขอยืมที่รออนุมัติ</h3>
+                        
+                        <div id="pendingRequestsList">
+                            <!-- Pending requests will be loaded here -->
+                        </div>
+
+                        <div id="noPendingRequests" class="hidden text-center py-12">
+                            <i class="fas fa-check-circle text-4xl text-green-500 mb-4"></i>
+                            <h3 class="text-xl font-bold text-gray-400 mb-2">ไม่มีคำขอยืมที่รออนุมัติ</h3>
+                            <p class="text-gray-500">ไม่มีคำขอยืมที่รอการอนุมัติในขณะนี้</p>
+                        </div>
+
+                        <div id="pendingRequestsLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>กำลังโหลดคำขอยืม...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manage Items Tab -->
+                <div id="manageItemsTabContent" class="hidden admin-only">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold">จัดการสิ่งของ</h3>
+                            <button onclick="openAddItemModal()" class="btn-success">
+                                <i class="fas fa-plus mr-2"></i>เพิ่มสิ่งของใหม่
+                            </button>
+                        </div>
+
+                        <div id="manageItemsList">
+                            <!-- Items for management will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manage Users Tab -->
+                <div id="manageUsersTabContent" class="hidden admin-only">
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">จัดการผู้ใช้</h3>
+                        
+                        <div id="usersList">
+                            <!-- Users will be loaded here -->
+                        </div>
+
+                        <div id="noUsers" class="hidden text-center py-12">
+                            <i class="fas fa-users text-4xl text-gray-500 mb-4"></i>
+                            <h3 class="text-xl font-bold text-gray-400 mb-2">ไม่พบผู้ใช้</h3>
+                            <p class="text-gray-500">ไม่มีผู้ใช้ในระบบ</p>
+                        </div>
+
+                        <div id="usersLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>กำลังโหลดข้อมูลผู้ใช้...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -408,6 +515,57 @@
         <div class="text-center">
             <div class="spinner mb-4"></div>
             <p class="text-lg">กำลังประมวลผล...</p>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">เพิ่มสิ่งของใหม่</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">ชื่อสิ่งของ</label>
+                    <input type="text" id="itemNameInput" class="w-full p-2 bg-gray-700 rounded" placeholder="กรอกชื่อสิ่งของ">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">คำอธิบาย</label>
+                    <textarea id="itemDescInput" class="w-full p-2 bg-gray-700 rounded" rows="3" placeholder="กรอกคำอธิบาย"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">หมวดหมู่</label>
+                    <select id="itemCategoryInput" class="w-full p-2 bg-gray-700 rounded">
+                        <option value="book">หนังสือ</option>
+                        <option value="electronic">อุปกรณ์อิเล็กทรอนิกส์</option>
+                        <option value="tool">เครื่องมือ</option>
+                        <option value="sport">กีฬา</option>
+                        <option value="other">อื่นๆ</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">จำนวนทั้งหมด</label>
+                        <input type="number" id="itemQuantityInput" class="w-full p-2 bg-gray-700 rounded" min="1" value="1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">ที่จัดเก็บ</label>
+                        <input type="text" id="itemLocationInput" class="w-full p-2 bg-gray-700 rounded" placeholder="ตู้ A1 ชั้น 1">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">URL รูปภาพ (ไม่จำเป็น)</label>
+                    <input type="text" id="itemImageInput" class="w-full p-2 bg-gray-700 rounded" placeholder="https://example.com/image.jpg">
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closeAddItemModal()" class="btn-danger">ยกเลิก</button>
+                <button onclick="addNewItem()" class="btn-success">บันทึก</button>
+            </div>
         </div>
     </div>
 
@@ -427,26 +585,32 @@
         let currentUser = null;
         let currentItems = [];
         let currentBorrowings = [];
+        let currentAdminData = {
+            pendingRequests: [],
+            users: []
+        };
 
         // =============================================
         // UI Functions
         // =============================================
-        function showMessage(type, text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            messageDiv.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
-                    <span>${text}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                messageDiv.style.animation = 'slideIn 0.3s ease-out reverse';
-                setTimeout(() => messageDiv.remove(), 300);
-            }, 3000);
+        function showMessage(type, title, text, timer = 3000) {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: timer,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+
+            Toast.fire({
+                icon: type,
+                title: title,
+                text: text
+            });
         }
 
         function showLoading() {
@@ -462,6 +626,7 @@
             document.getElementById('dashboard').classList.add('hidden');
             document.getElementById('browseItems').classList.add('hidden');
             document.getElementById('myBorrowings').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
             
             // Show selected section
             document.getElementById(sectionId).classList.remove('hidden');
@@ -471,6 +636,37 @@
                 loadItems();
             } else if (sectionId === 'myBorrowings') {
                 loadMyBorrowings();
+            } else if (sectionId === 'adminPanel') {
+                showAdminTab('pendingRequests');
+            }
+        }
+
+        function showAdminTab(tabId) {
+            // Hide all tabs
+            document.getElementById('pendingRequestsTabContent').classList.add('hidden');
+            document.getElementById('manageItemsTabContent').classList.add('hidden');
+            document.getElementById('manageUsersTabContent').classList.add('hidden');
+            
+            // Remove active class from all tabs
+            document.getElementById('pendingRequestsTab').classList.remove('border-b-2', 'border-purple-500', 'text-purple-500');
+            document.getElementById('pendingRequestsTab').classList.add('text-gray-400');
+            document.getElementById('manageItemsTab').classList.remove('border-b-2', 'border-purple-500', 'text-purple-500');
+            document.getElementById('manageItemsTab').classList.add('text-gray-400');
+            document.getElementById('manageUsersTab').classList.remove('border-b-2', 'border-purple-500', 'text-purple-500');
+            document.getElementById('manageUsersTab').classList.add('text-gray-400');
+            
+            // Show selected tab
+            document.getElementById(`${tabId}TabContent`).classList.remove('hidden');
+            document.getElementById(`${tabId}Tab`).classList.remove('text-gray-400');
+            document.getElementById(`${tabId}Tab`).classList.add('border-b-2', 'border-purple-500', 'text-purple-500');
+            
+            // Load data for the tab
+            if (tabId === 'pendingRequests') {
+                loadPendingRequests();
+            } else if (tabId === 'manageItems') {
+                loadItemsForManagement();
+            } else if (tabId === 'manageUsers') {
+                loadUsers();
             }
         }
 
@@ -481,12 +677,34 @@
             document.getElementById('userInfo').classList.remove('hidden');
             
             document.getElementById('userName').textContent = user.displayName;
-            document.getElementById('userRole').textContent = user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน';
+            document.getElementById('userLineId').textContent = user.lineId || user.uid;
+            
+            const roleText = user.role === 'admin' ? 'แอดมิน' : 
+                            user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
+            const roleClass = user.role === 'admin' || user.role === 'superadmin' ? 'badge-admin' : 'badge-user';
+            
+            document.getElementById('userRoleBadge').textContent = roleText;
+            document.getElementById('userRoleBadge').className = roleClass;
             document.getElementById('userAvatar').src = user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`;
             
+            // Show admin panel button if user is admin
             if (user.role === 'admin' || user.role === 'superadmin') {
-                // Add admin menu items if needed
+                document.getElementById('adminPanelBtn').classList.remove('hidden');
             }
+        }
+
+        function openAddItemModal() {
+            document.getElementById('addItemModal').classList.remove('hidden');
+        }
+
+        function closeAddItemModal() {
+            document.getElementById('addItemModal').classList.add('hidden');
+            // Clear inputs
+            document.getElementById('itemNameInput').value = '';
+            document.getElementById('itemDescInput').value = '';
+            document.getElementById('itemQuantityInput').value = '1';
+            document.getElementById('itemLocationInput').value = '';
+            document.getElementById('itemImageInput').value = '';
         }
 
         // =============================================
@@ -524,13 +742,13 @@
                 
             } catch (error) {
                 hideLoading();
-                showMessage('error', error.message);
+                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
                 throw error;
             }
         }
 
         // =============================================
-        // Login Functions
+        // LINE Login Functions
         // =============================================
         async function loginWithLINE() {
             try {
@@ -572,7 +790,14 @@
                 if (result.success) {
                     currentUser = result.user;
                     updateUserUI(currentUser);
-                    showMessage('success', `ยินดีต้อนรับ, ${currentUser.displayName}!`);
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'เข้าสู่ระบบสำเร็จ!',
+                        text: `ยินดีต้อนรับ ${currentUser.displayName}`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
                     
                     // Load dashboard data
                     loadDashboardData();
@@ -580,15 +805,33 @@
                 
             } catch (error) {
                 console.error('Login Error:', error);
-                showMessage('error', 'ไม่สามารถล็อกอินได้: ' + error.message);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถล็อกอินได้',
+                    text: error.message,
+                    confirmButtonText: 'ลองอีกครั้ง'
+                });
             }
         }
 
         function logout() {
-            if (liff.isLoggedIn()) {
-                liff.logout();
-            }
-            window.location.reload();
+            Swal.fire({
+                title: 'ออกจากระบบ?',
+                text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'ใช่, ออกจากระบบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (liff.isLoggedIn()) {
+                        liff.logout();
+                    }
+                    window.location.reload();
+                }
+            });
         }
 
         // =============================================
@@ -600,20 +843,33 @@
                 
                 // Update stats
                 if (data.stats) {
-                    document.getElementById('totalItems').textContent = data.stats.totalItems;
-                    document.getElementById('availableItems').textContent = data.stats.totalAvailable;
-                    document.getElementById('borrowedItems').textContent = data.stats.totalBorrowed;
-                    document.getElementById('overdueItems').textContent = data.stats.overdueItems;
+                    document.getElementById('totalItems').textContent = data.stats.totalItems || 0;
+                    document.getElementById('availableItems').textContent = data.stats.totalAvailable || 0;
+                    document.getElementById('borrowedItems').textContent = data.stats.totalBorrowed || 0;
+                    document.getElementById('pendingItems').textContent = data.stats.pendingRequests || 0;
                 }
                 
                 // Update popular items
-                if (data.popularItems) {
+                if (data.popularItems && data.popularItems.length > 0) {
                     const popularContainer = document.getElementById('popularItems');
-                    popularContainer.innerHTML = data.popularItems.map(item => `
+                    popularContainer.innerHTML = data.popularItems.slice(0, 3).map(item => `
                         <div class="flex justify-between items-center p-3 bg-gray-700 rounded mb-2">
                             <span>${item.itemName}</span>
-                            <span class="text-blue-400 font-bold">${item.borrowCount} ครั้ง</span>
+                            <span class="text-blue-400 font-bold">${item.borrowCount || 0} ครั้ง</span>
                         </div>
+                    `).join('');
+                }
+                
+                // Update quick borrow section
+                if (data.quickBorrow && data.quickBorrow.length > 0) {
+                    const quickBorrowContainer = document.getElementById('quickBorrow');
+                    quickBorrowContainer.innerHTML = data.quickBorrow.slice(0, 3).map(item => `
+                        <button onclick="quickBorrow('${item.itemId}')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left mb-2">
+                            <div class="flex justify-between items-center">
+                                <span>${item.itemName}</span>
+                                <span class="text-green-400">ว่าง ${item.available || 0} ชิ้น</span>
+                            </div>
+                        </button>
                     `).join('');
                 }
                 
@@ -653,41 +909,7 @@
             } catch (error) {
                 console.error('Error loading items:', error);
                 document.getElementById('itemsLoading').classList.add('hidden');
-                
-                // Show sample items for testing
-                currentItems = [
-                    {
-                        itemId: 'ITM001',
-                        itemName: 'หนังสือ Python Programming',
-                        description: 'หนังสือสอนภาษา Python สำหรับผู้เริ่มต้น',
-                        category: 'book',
-                        quantity: 10,
-                        available: 10,
-                        location: 'ตู้ A1 ชั้น 1',
-                        imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400'
-                    },
-                    {
-                        itemId: 'ITM002',
-                        itemName: 'เมาส์ไร้สาย Logitech',
-                        description: 'เมาส์ไร้สายรุ่น MX Master 3',
-                        category: 'electronic',
-                        quantity: 5,
-                        available: 5,
-                        location: 'ตู้ B2 ชั้น 2',
-                        imageUrl: 'https://images.unsplash.com/photo-1527814050087-3793815479db?w=400'
-                    },
-                    {
-                        itemId: 'ITM003',
-                        itemName: 'ไขควงชุด 12 ชิ้น',
-                        description: 'ชุดไขควงคุณภาพดี 12 ชิ้นในกล่อง',
-                        category: 'tool',
-                        quantity: 3,
-                        available: 3,
-                        location: 'ตู้ C3 ชั้น 3',
-                        imageUrl: 'https://images.unsplash.com/photo-1585771724684-382b6b673c5d?w=400'
-                    }
-                ];
-                renderItems();
+                document.getElementById('noItems').classList.remove('hidden');
             }
         }
 
@@ -723,11 +945,11 @@
                             <i class="fas fa-map-marker-alt mr-1"></i>${item.location || 'ไม่ระบุ'}
                         </span>
                         <span class="font-bold ${item.available > 0 ? 'text-green-400' : 'text-red-400'}">
-                            ${item.available}/${item.quantity}
+                            ว่าง ${item.available}/${item.quantity} ชิ้น
                         </span>
                     </div>
-                    <button onclick="borrowItem('${item.itemId}')" 
-                            class="w-full py-2 rounded font-medium ${item.available > 0 ? 'btn-success' : 'bg-gray-700'} text-white"
+                    <button onclick="borrowItem('${item.itemId}', '${item.itemName}')" 
+                            class="w-full py-2 rounded font-medium ${item.available > 0 ? 'btn-success' : 'bg-gray-700 cursor-not-allowed'} text-white"
                             ${item.available === 0 ? 'disabled' : ''}>
                         ${item.available > 0 ? 
                             '<i class="fas fa-cart-plus mr-2"></i>ยืมของ' : 
@@ -736,6 +958,8 @@
                     </button>
                 </div>
             `).join('');
+            
+            document.getElementById('noItems').classList.add('hidden');
         }
 
         function searchItems() {
@@ -747,40 +971,64 @@
         }
 
         async function quickBorrow(itemId) {
-            await borrowItem(itemId);
+            const item = currentItems.find(i => i.itemId === itemId);
+            if (item) {
+                await borrowItem(itemId, item.itemName);
+            }
         }
 
-        async function borrowItem(itemId) {
+        async function borrowItem(itemId, itemName) {
             try {
-                const item = currentItems.find(i => i.itemId === itemId);
-                if (!item) {
-                    showMessage('error', 'ไม่พบสิ่งของ');
-                    return;
-                }
-                
-                if (item.available <= 0) {
-                    showMessage('error', 'สิ่งของนี้ไม่ว่างสำหรับยืม');
-                    return;
-                }
-                
-                if (!confirm(`คุณต้องการยืม "${item.itemName}" ใช่หรือไม่?\nกรุณาคืนภายใน 7 วัน`)) {
-                    return;
-                }
-                
-                const result = await callAPI('borrowItem', {
-                    itemId: itemId,
-                    displayName: currentUser.displayName,
-                    lineId: currentUser.lineId
+                Swal.fire({
+                    title: 'ยืนยันการยืม',
+                    html: `คุณต้องการยืม <b>${itemName}</b> ใช่หรือไม่?<br><small>กรุณาคืนภายใน 7 วัน</small>`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'ใช่, ยืมเลย',
+                    cancelButtonText: 'ยกเลิก',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#6b7280'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        showLoading();
+                        
+                        const result = await callAPI('borrowItem', {
+                            itemId: itemId,
+                            displayName: currentUser.displayName,
+                            lineId: currentUser.lineId
+                        });
+                        
+                        if (result.success) {
+                            // Send Flex Message to LINE
+                            await sendBorrowFlexMessage(itemName, result.borrowId);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ยืมของสำเร็จ!',
+                                html: `คุณได้ยืม <b>${itemName}</b> แล้ว<br><small>รอการอนุมัติจากแอดมิน</small>`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            // Refresh data
+                            loadItems();
+                            loadDashboardData();
+                            
+                            // If admin, refresh pending requests
+                            if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                                loadPendingRequests();
+                            }
+                        }
+                    }
                 });
-                
-                if (result.success) {
-                    showMessage('success', result.message || 'ยืมของสำเร็จ!');
-                    loadItems(); // Refresh items
-                    loadDashboardData(); // Refresh dashboard
-                }
                 
             } catch (error) {
                 console.error('Error borrowing item:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถยืมได้',
+                    text: error.message
+                });
             }
         }
 
@@ -807,9 +1055,6 @@
             } catch (error) {
                 console.error('Error loading borrowings:', error);
                 document.getElementById('borrowingsLoading').classList.add('hidden');
-                
-                // Show sample data for testing
-                currentBorrowings = [];
                 document.getElementById('noBorrowings').classList.remove('hidden');
             }
         }
@@ -827,13 +1072,19 @@
                 if (status === 'borrowed') {
                     statusClass = isOverdue ? 'status-overdue' : 'status-borrowed';
                     statusText = isOverdue ? 'ค้างคืน' : 'กำลังยืม';
+                } else if (status === 'pending') {
+                    statusClass = 'status-pending';
+                    statusText = 'รออนุมัติ';
+                } else if (status === 'rejected') {
+                    statusClass = 'status-rejected';
+                    statusText = 'ถูกปฏิเสธ';
                 }
                 
                 return `
                     <tr class="border-b border-gray-700">
                         <td class="py-4 px-4">
                             <div class="font-medium">${borrow.itemName}</div>
-                            <div class="text-sm text-gray-400">${borrow.itemId}</div>
+                            <div class="text-sm text-gray-400">รหัส: ${borrow.itemId}</div>
                         </td>
                         <td class="py-4 px-4">${formatDate(borrow.borrowDate)}</td>
                         <td class="py-4 px-4 ${isOverdue ? 'text-red-400 font-bold' : ''}">
@@ -845,35 +1096,838 @@
                         </td>
                         <td class="py-4 px-4">
                             ${status === 'borrowed' ? `
-                                <button onclick="returnItem('${borrow.borrowId}')" 
+                                <button onclick="returnItem('${borrow.borrowId}', '${borrow.itemName}')" 
                                         class="btn-success text-sm">
                                     <i class="fas fa-undo mr-1"></i>คืนของ
                                 </button>
-                            ` : '-'}
+                            ` : ''}
+                            ${status === 'pending' ? `
+                                <button onclick="cancelBorrowRequest('${borrow.borrowId}', '${borrow.itemName}')" 
+                                        class="btn-danger text-sm">
+                                    <i class="fas fa-times mr-1"></i>ยกเลิก
+                                </button>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
             }).join('');
+            
+            document.getElementById('noBorrowings').classList.add('hidden');
         }
 
-        async function returnItem(borrowId) {
-            try {
-                if (!confirm('คุณต้องการคืนสิ่งของใช่หรือไม่?')) {
-                    return;
+        async function returnItem(borrowId, itemName) {
+            Swal.fire({
+                title: 'ยืนยันการคืน',
+                html: `คุณต้องการคืน <b>${itemName}</b> ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, คืนเลย',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('returnItem', {
+                            borrowId: borrowId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'คืนของสำเร็จ!',
+                                text: `คุณได้คืน ${itemName} แล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            loadMyBorrowings();
+                            loadDashboardData();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถคืนได้',
+                            text: error.message
+                        });
+                    }
                 }
+            });
+        }
+
+        async function cancelBorrowRequest(borrowId, itemName) {
+            Swal.fire({
+                title: 'ยืนยันการยกเลิก',
+                html: `คุณต้องการยกเลิกคำขอยืม <b>${itemName}</b> ใช่หรือไม่?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ยกเลิกเลย',
+                cancelButtonText: 'ไม่ยกเลิก',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('cancelBorrowRequest', {
+                            borrowId: borrowId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ยกเลิกสำเร็จ!',
+                                text: `คุณได้ยกเลิกคำขอยืม ${itemName} แล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            loadMyBorrowings();
+                            loadDashboardData();
+                            
+                            // Refresh pending requests if admin
+                            if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                                loadPendingRequests();
+                            }
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถยกเลิกได้',
+                            text: error.message
+                        });
+                    }
+                }
+            });
+        }
+
+        // =============================================
+        // Admin Functions
+        // =============================================
+        async function loadPendingRequests() {
+            try {
+                if (!(currentUser.role === 'admin' || currentUser.role === 'superadmin')) return;
                 
-                const result = await callAPI('returnItem', {
-                    borrowId: borrowId
-                });
+                document.getElementById('pendingRequestsLoading').classList.remove('hidden');
+                document.getElementById('pendingRequestsList').innerHTML = '';
+                document.getElementById('noPendingRequests').classList.add('hidden');
                 
-                if (result.success) {
-                    showMessage('success', result.message || 'คืนของสำเร็จ!');
-                    loadMyBorrowings(); // Refresh borrowings
-                    loadDashboardData(); // Refresh dashboard
+                const data = await callAPI('getPendingRequests');
+                
+                document.getElementById('pendingRequestsLoading').classList.add('hidden');
+                
+                if (data.requests && data.requests.length > 0) {
+                    currentAdminData.pendingRequests = data.requests;
+                    renderPendingRequests();
+                    
+                    // Update badge count
+                    document.getElementById('pendingCountBadge').textContent = data.requests.length;
+                } else {
+                    document.getElementById('noPendingRequests').classList.remove('hidden');
+                    document.getElementById('pendingCountBadge').textContent = '0';
                 }
                 
             } catch (error) {
-                console.error('Error returning item:', error);
+                console.error('Error loading pending requests:', error);
+                document.getElementById('pendingRequestsLoading').classList.add('hidden');
+                document.getElementById('noPendingRequests').classList.remove('hidden');
+            }
+        }
+
+        function renderPendingRequests() {
+            const container = document.getElementById('pendingRequestsList');
+            
+            container.innerHTML = currentAdminData.pendingRequests.map(request => `
+                <div class="bg-gray-700 rounded p-4 mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="font-bold text-lg">${request.itemName}</h4>
+                            <p class="text-gray-400 text-sm">รหัส: ${request.itemId}</p>
+                        </div>
+                        <span class="status-pending">รออนุมัติ</span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-user text-blue-400 mr-2"></i>
+                            <span>${request.borrowerName}</span>
+                            <span class="text-gray-400 text-sm ml-2">(${request.borrowerLineId})</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar text-green-400 mr-2"></i>
+                            <span>วันที่ขอยืม: ${formatDate(request.requestDate)}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="approveRequest('${request.borrowId}', '${request.borrowerName}', '${request.itemName}')" 
+                                class="btn-success text-sm">
+                            <i class="fas fa-check mr-1"></i>อนุมัติ
+                        </button>
+                        <button onclick="rejectRequest('${request.borrowId}', '${request.borrowerName}', '${request.itemName}')" 
+                                class="btn-danger text-sm">
+                            <i class="fas fa-times mr-1"></i>ปฏิเสธ
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('noPendingRequests').classList.add('hidden');
+        }
+
+        async function approveRequest(borrowId, borrowerName, itemName) {
+            Swal.fire({
+                title: 'ยืนยันการอนุมัติ',
+                html: `อนุมัติให้ <b>${borrowerName}</b> ยืม <b>${itemName}</b> ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, อนุมัติ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('approveRequest', {
+                            borrowId: borrowId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'อนุมัติสำเร็จ!',
+                                text: `อนุมัติการยืม ${itemName} ให้ ${borrowerName} แล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            // Send notification to borrower
+                            await sendApprovalFlexMessage(borrowerName, itemName, borrowId);
+                            
+                            // Refresh data
+                            loadPendingRequests();
+                            loadDashboardData();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถอนุมัติได้',
+                            text: error.message
+                        });
+                    }
+                }
+            });
+        }
+
+        async function rejectRequest(borrowId, borrowerName, itemName) {
+            Swal.fire({
+                title: 'ยืนยันการปฏิเสธ',
+                html: `ปฏิเสธคำขอยืม <b>${itemName}</b> จาก <b>${borrowerName}</b> ใช่หรือไม่?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ปฏิเสธ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('rejectRequest', {
+                            borrowId: borrowId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ปฏิเสธสำเร็จ!',
+                                text: `ปฏิเสธคำขอยืม ${itemName} จาก ${borrowerName} แล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            // Send notification to borrower
+                            await sendRejectionFlexMessage(borrowerName, itemName);
+                            
+                            // Refresh data
+                            loadPendingRequests();
+                            loadDashboardData();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถปฏิเสธได้',
+                            text: error.message
+                        });
+                    }
+                }
+            });
+        }
+
+        async function loadItemsForManagement() {
+            try {
+                const data = await callAPI('getItemsForManagement');
+                
+                if (data.items && data.items.length > 0) {
+                    renderItemsForManagement(data.items);
+                } else {
+                    document.getElementById('manageItemsList').innerHTML = `
+                        <div class="text-center py-12">
+                            <i class="fas fa-box-open text-4xl text-gray-500 mb-4"></i>
+                            <h3 class="text-xl font-bold text-gray-400 mb-2">ไม่พบสิ่งของ</h3>
+                            <p class="text-gray-500">ยังไม่มีสิ่งของในระบบ</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error loading items for management:', error);
+                document.getElementById('manageItemsList').innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-400 mb-2">เกิดข้อผิดพลาด</h3>
+                        <p class="text-gray-500">ไม่สามารถโหลดข้อมูลสิ่งของได้</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderItemsForManagement(items) {
+            const container = document.getElementById('manageItemsList');
+            
+            container.innerHTML = items.map(item => `
+                <div class="bg-gray-700 rounded p-4 mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="font-bold text-lg">${item.itemName}</h4>
+                            <p class="text-gray-400 text-sm">${item.description || 'ไม่มีคำอธิบาย'}</p>
+                        </div>
+                        <span class="font-bold ${item.available > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ว่าง ${item.available}/${item.quantity}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <span class="text-gray-400 text-sm">หมวดหมู่:</span>
+                            <span class="ml-2">${getCategoryName(item.category)}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 text-sm">ที่จัดเก็บ:</span>
+                            <span class="ml-2">${item.location || 'ไม่ระบุ'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="editItem('${item.itemId}')" class="btn-primary text-sm">
+                            <i class="fas fa-edit mr-1"></i>แก้ไข
+                        </button>
+                        <button onclick="deleteItem('${item.itemId}', '${item.itemName}')" 
+                                class="btn-danger text-sm" ${item.available < item.quantity ? 'disabled' : ''}>
+                            <i class="fas fa-trash mr-1"></i>ลบ
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addNewItem() {
+            try {
+                const itemData = {
+                    itemName: document.getElementById('itemNameInput').value.trim(),
+                    description: document.getElementById('itemDescInput').value.trim(),
+                    category: document.getElementById('itemCategoryInput').value,
+                    quantity: parseInt(document.getElementById('itemQuantityInput').value),
+                    location: document.getElementById('itemLocationInput').value.trim(),
+                    imageUrl: document.getElementById('itemImageInput').value.trim() || CONFIG.DEFAULT_IMAGE
+                };
+                
+                if (!itemData.itemName) {
+                    showMessage('error', 'กรุณากรอกชื่อสิ่งของ');
+                    return;
+                }
+                
+                if (itemData.quantity < 1) {
+                    showMessage('error', 'จำนวนต้องมากกว่า 0');
+                    return;
+                }
+                
+                const result = await callAPI('addItem', itemData);
+                
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'เพิ่มสิ่งของสำเร็จ!',
+                        text: `เพิ่ม ${itemData.itemName} เรียบร้อยแล้ว`,
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    
+                    closeAddItemModal();
+                    loadItemsForManagement();
+                    loadDashboardData();
+                }
+                
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถเพิ่มได้',
+                    text: error.message
+                });
+            }
+        }
+
+        async function deleteItem(itemId, itemName) {
+            Swal.fire({
+                title: 'ยืนยันการลบ',
+                html: `คุณต้องการลบสิ่งของ <b>${itemName}</b> ใช่หรือไม่?<br><small>การลบนี้ไม่สามารถกู้คืนได้</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ลบเลย',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('deleteItem', {
+                            itemId: itemId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ลบสำเร็จ!',
+                                text: `ลบ ${itemName} เรียบร้อยแล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            loadItemsForManagement();
+                            loadDashboardData();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถลบได้',
+                            text: error.message
+                        });
+                    }
+                }
+            });
+        }
+
+        async function loadUsers() {
+            try {
+                document.getElementById('usersLoading').classList.remove('hidden');
+                document.getElementById('usersList').innerHTML = '';
+                document.getElementById('noUsers').classList.add('hidden');
+                
+                const data = await callAPI('getUsers');
+                
+                document.getElementById('usersLoading').classList.add('hidden');
+                
+                if (data.users && data.users.length > 0) {
+                    currentAdminData.users = data.users;
+                    renderUsers();
+                } else {
+                    document.getElementById('noUsers').classList.remove('hidden');
+                }
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersLoading').classList.add('hidden');
+                document.getElementById('noUsers').classList.remove('hidden');
+            }
+        }
+
+        function renderUsers() {
+            const container = document.getElementById('usersList');
+            
+            container.innerHTML = currentAdminData.users.map(user => `
+                <div class="bg-gray-700 rounded p-4 mb-4">
+                    <div class="flex items-center mb-3">
+                        <img src="${user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" 
+                             class="w-10 h-10 rounded-full mr-3">
+                        <div>
+                            <div class="font-bold">${user.displayName}</div>
+                            <div class="text-gray-400 text-sm">${user.lineId || user.uid}</div>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="${user.role === 'admin' || user.role === 'superadmin' ? 'badge-admin' : 'badge-user'}">
+                                ${user.role === 'admin' ? 'แอดมิน' : 
+                                 user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between text-sm mb-3">
+                        <div>
+                            <span class="text-gray-400">ยืมทั้งหมด:</span>
+                            <span class="ml-2">${user.totalBorrowed || 0} ครั้ง</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">วันที่สมัคร:</span>
+                            <span class="ml-2">${formatDate(user.createdAt)}</span>
+                        </div>
+                    </div>
+                    
+                    ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
+                        <div class="flex justify-end space-x-2">
+                            ${user.role === 'user' ? `
+                                <button onclick="promoteToAdmin('${user.uid}', '${user.displayName}')" 
+                                        class="btn-warning text-sm">
+                                    <i class="fas fa-user-shield mr-1"></i>แต่งตั้งแอดมิน
+                                </button>
+                            ` : user.role === 'admin' ? `
+                                <button onclick="demoteToUser('${user.uid}', '${user.displayName}')" 
+                                        class="btn-danger text-sm">
+                                    <i class="fas fa-user mr-1"></i>ถอดแอดมิน
+                                </button>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+            
+            document.getElementById('noUsers').classList.add('hidden');
+        }
+
+        async function promoteToAdmin(userId, userName) {
+            Swal.fire({
+                title: 'ยืนยันการแต่งตั้ง',
+                html: `แต่งตั้ง <b>${userName}</b> เป็นแอดมินใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, แต่งตั้ง',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#f59e0b',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('promoteToAdmin', {
+                            targetUserId: userId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'แต่งตั้งสำเร็จ!',
+                                text: `${userName} ได้รับการแต่งตั้งเป็นแอดมินแล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            loadUsers();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถแต่งตั้งได้',
+                            text: error.message
+                        });
+                    }
+                }
+            });
+        }
+
+        async function demoteToUser(userId, userName) {
+            Swal.fire({
+                title: 'ยืนยันการถอด',
+                html: `ถอด <b>${userName}</b> จากตำแหน่งแอดมินใช่หรือไม่?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ถอด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('demoteToUser', {
+                            targetUserId: userId
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ถอดสำเร็จ!',
+                                text: `${userName} ถูกถอดจากตำแหน่งแอดมินแล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            
+                            loadUsers();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถถอดได้',
+                            text: error.message
+                        });
+                    }
+                }
+            });
+        }
+
+        // =============================================
+        // LINE Flex Message Functions
+        // =============================================
+        async function sendBorrowFlexMessage(itemName, borrowId) {
+            try {
+                await liff.sendMessages([{
+                    type: 'flex',
+                    altText: `คำขอยืม ${itemName}`,
+                    contents: {
+                        type: 'bubble',
+                        header: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [{
+                                type: 'text',
+                                text: '📋 คำขอยืมใหม่',
+                                weight: 'bold',
+                                color: '#ffffff',
+                                align: 'center'
+                            }],
+                            backgroundColor: '#3b82f6',
+                            paddingAll: 'md'
+                        },
+                        body: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [
+                                {
+                                    type: 'text',
+                                    text: `คุณ ${currentUser.displayName}`,
+                                    weight: 'bold',
+                                    size: 'lg',
+                                    margin: 'md'
+                                },
+                                {
+                                    type: 'text',
+                                    text: `ได้ทำการขอยืม:`,
+                                    size: 'sm',
+                                    color: '#666666',
+                                    margin: 'sm'
+                                },
+                                {
+                                    type: 'text',
+                                    text: itemName,
+                                    weight: 'bold',
+                                    size: 'xl',
+                                    color: '#3b82f6',
+                                    margin: 'md'
+                                },
+                                {
+                                    type: 'separator',
+                                    margin: 'lg'
+                                },
+                                {
+                                    type: 'box',
+                                    layout: 'horizontal',
+                                    margin: 'lg',
+                                    contents: [
+                                        {
+                                            type: 'text',
+                                            text: 'รหัสคำขอ',
+                                            size: 'sm',
+                                            color: '#666666',
+                                            flex: 0
+                                        },
+                                        {
+                                            type: 'text',
+                                            text: borrowId,
+                                            size: 'sm',
+                                            color: '#666666',
+                                            align: 'end'
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        footer: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [{
+                                type: 'text',
+                                text: 'สถานะ: รอการอนุมัติจากแอดมิน',
+                                color: '#8b5cf6',
+                                align: 'center',
+                                weight: 'bold'
+                            }]
+                        }
+                    }
+                }]);
+                
+            } catch (error) {
+                console.error('Error sending flex message:', error);
+            }
+        }
+
+        async function sendApprovalFlexMessage(userName, itemName, borrowId) {
+            try {
+                await liff.sendMessages([{
+                    type: 'flex',
+                    altText: `อนุมัติการยืม ${itemName}`,
+                    contents: {
+                        type: 'bubble',
+                        header: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [{
+                                type: 'text',
+                                text: '✅ อนุมัติการยืม',
+                                weight: 'bold',
+                                color: '#ffffff',
+                                align: 'center'
+                            }],
+                            backgroundColor: '#10b981',
+                            paddingAll: 'md'
+                        },
+                        body: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [
+                                {
+                                    type: 'text',
+                                    text: `เรียน ${userName}`,
+                                    weight: 'bold',
+                                    size: 'lg',
+                                    margin: 'md'
+                                },
+                                {
+                                    type: 'text',
+                                    text: `คำขอยืมของคุณได้รับการอนุมัติแล้ว:`,
+                                    size: 'sm',
+                                    color: '#666666',
+                                    margin: 'sm'
+                                },
+                                {
+                                    type: 'text',
+                                    text: itemName,
+                                    weight: 'bold',
+                                    size: 'xl',
+                                    color: '#10b981',
+                                    margin: 'md'
+                                },
+                                {
+                                    type: 'separator',
+                                    margin: 'lg'
+                                },
+                                {
+                                    type: 'box',
+                                    layout: 'horizontal',
+                                    margin: 'lg',
+                                    contents: [
+                                        {
+                                            type: 'text',
+                                            text: 'รหัสคำขอ',
+                                            size: 'sm',
+                                            color: '#666666',
+                                            flex: 0
+                                        },
+                                        {
+                                            type: 'text',
+                                            text: borrowId,
+                                            size: 'sm',
+                                            color: '#666666',
+                                            align: 'end'
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        footer: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [{
+                                type: 'text',
+                                text: 'กรุณาคืนของภายใน 7 วัน',
+                                color: '#f59e0b',
+                                align: 'center',
+                                weight: 'bold'
+                            }]
+                        }
+                    }
+                }]);
+                
+            } catch (error) {
+                console.error('Error sending approval flex message:', error);
+            }
+        }
+
+        async function sendRejectionFlexMessage(userName, itemName) {
+            try {
+                await liff.sendMessages([{
+                    type: 'flex',
+                    altText: `ปฏิเสธการยืม ${itemName}`,
+                    contents: {
+                        type: 'bubble',
+                        header: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [{
+                                type: 'text',
+                                text: '❌ ปฏิเสธการยืม',
+                                weight: 'bold',
+                                color: '#ffffff',
+                                align: 'center'
+                            }],
+                            backgroundColor: '#ef4444',
+                            paddingAll: 'md'
+                        },
+                        body: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [
+                                {
+                                    type: 'text',
+                                    text: `เรียน ${userName}`,
+                                    weight: 'bold',
+                                    size: 'lg',
+                                    margin: 'md'
+                                },
+                                {
+                                    type: 'text',
+                                    text: `ขออภัย คำขอยืมของคุณถูกปฏิเสธ:`,
+                                    size: 'sm',
+                                    color: '#666666',
+                                    margin: 'sm'
+                                },
+                                {
+                                    type: 'text',
+                                    text: itemName,
+                                    weight: 'bold',
+                                    size: 'xl',
+                                    color: '#ef4444',
+                                    margin: 'md'
+                                },
+                                {
+                                    type: 'separator',
+                                    margin: 'lg'
+                                },
+                                {
+                                    type: 'text',
+                                    text: 'กรุณาติดต่อผู้ดูแลระบบสำหรับข้อมูลเพิ่มเติม',
+                                    size: 'sm',
+                                    color: '#666666',
+                                    margin: 'lg',
+                                    wrap: true
+                                }
+                            ]
+                        }
+                    }
+                }]);
+                
+            } catch (error) {
+                console.error('Error sending rejection flex message:', error);
             }
         }
 
@@ -894,6 +1948,17 @@
             }
         }
 
+        function getCategoryName(category) {
+            const categories = {
+                'book': 'หนังสือ',
+                'electronic': 'อุปกรณ์อิเล็กทรอนิกส์',
+                'tool': 'เครื่องมือ',
+                'sport': 'กีฬา',
+                'other': 'อื่นๆ'
+            };
+            return categories[category] || category;
+        }
+
         // =============================================
         // Initialize App
         // =============================================
@@ -901,7 +1966,12 @@
             try {
                 // Check if LIFF is available
                 if (typeof liff === 'undefined') {
-                    showMessage('error', 'กรุณาเปิดแอพผ่าน LINE');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'กรุณาเปิดแอพผ่าน LINE',
+                        text: 'ระบบนี้ต้องใช้งานผ่าน LINE เท่านั้น',
+                        confirmButtonText: 'ตกลง'
+                    });
                     return;
                 }
                 
