@@ -277,6 +277,30 @@
         .toggle-checkbox:checked + .toggle-label {
             background-color: #10b981;
         }
+        .token-valid {
+            border-color: #10b981 !important;
+            background: rgba(16, 185, 129, 0.05) !important;
+        }
+        .token-invalid {
+            border-color: #ef4444 !important;
+            background: rgba(239, 68, 68, 0.05) !important;
+        }
+        .auto-fill-success {
+            animation: pulseSuccess 1.5s ease-in-out;
+        }
+        @keyframes pulseSuccess {
+            0% { background-color: rgba(16, 185, 129, 0.1); }
+            50% { background-color: rgba(16, 185, 129, 0.3); }
+            100% { background-color: rgba(16, 185, 129, 0.1); }
+        }
+        .bot-status-connected {
+            border-color: #10b981 !important;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%) !important;
+        }
+        .bot-status-disconnected {
+            border-color: #ef4444 !important;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%) !important;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -311,7 +335,10 @@
                                 <h3 class="font-bold">การแจ้งเตือน</h3>
                             </div>
                             <div id="notificationList" class="max-h-96 overflow-y-auto scrollbar-thin">
-                                <!-- Notifications will be loaded here -->
+                                <div class="p-4 text-center">
+                                    <i class="fas fa-bell-slash text-gray-400 text-2xl mb-2"></i>
+                                    <p class="text-gray-400">ไม่มีการแจ้งเตือน</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -459,16 +486,14 @@
                             <span class="text-sm text-gray-500">สัปดาห์นี้</span>
                         </div>
                         <div id="popularItems">
-                            <div class="space-y-4">
-                                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-xl border border-gray-800">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-10 h-10 rounded-lg bg-blue-900/30 flex items-center justify-center">
-                                            <i class="fas fa-box text-blue-400"></i>
-                                        </div>
-                                        <span class="font-medium">กำลังโหลด...</span>
+                            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-xl border border-gray-800">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-lg bg-blue-900/30 flex items-center justify-center">
+                                        <i class="fas fa-box text-blue-400"></i>
                                     </div>
-                                    <span class="text-blue-400 font-bold">- ครั้ง</span>
+                                    <span class="font-medium">กำลังโหลด...</span>
                                 </div>
+                                <span class="text-blue-400 font-bold">- ครั้ง</span>
                             </div>
                         </div>
                     </div>
@@ -797,7 +822,7 @@
                     </div>
                 </div>
 
-                <!-- LINE Bot Settings Tab -->
+                <!-- LINE Bot Settings Tab (ใหม่) -->
                 <div id="lineBotSettingsTabContent" class="hidden">
                     <div class="dark-card p-6 border border-gray-800">
                         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
@@ -808,12 +833,24 @@
                                 <p class="text-gray-400 text-sm mt-1">ตั้งค่าการแจ้งเตือนผ่าน LINE Bot</p>
                             </div>
                             
-                            <!-- Connection Status -->
-                            <div id="botConnectionStatus" class="mt-4 lg:mt-0">
-                                <div class="flex items-center space-x-2 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-                                    <div id="botStatusIndicator" class="w-3 h-3 rounded-full bg-red-500"></div>
-                                    <span id="botStatusText" class="text-sm">กำลังตรวจสอบ...</span>
+                            <div class="flex items-center space-x-3 mt-4 lg:mt-0">
+                                <!-- Connection Status -->
+                                <div id="botConnectionStatus">
+                                    <div class="flex items-center space-x-2 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
+                                        <div id="botStatusIndicator" class="w-3 h-3 rounded-full bg-red-500"></div>
+                                        <span id="botStatusText" class="text-sm">ยังไม่ได้ตั้งค่า</span>
+                                    </div>
                                 </div>
+                                
+                                <!-- ปุ่มดึงข้อมูลอัตโนมัติ -->
+                                <button onclick="autoDetectBotInfo()" class="btn-primary" title="ดึงข้อมูลบอทอัตโนมัติ">
+                                    <i class="fas fa-robot mr-2"></i>ดึงข้อมูล
+                                </button>
+                                
+                                <!-- ปุ่มทดสอบการเชื่อมต่อ -->
+                                <button onclick="testBotConnection()" class="btn-success">
+                                    <i class="fas fa-wifi mr-2"></i>ทดสอบ
+                                </button>
                             </div>
                         </div>
                         
@@ -827,12 +864,7 @@
                                 <div>
                                     <h4 id="botName" class="text-lg font-bold"></h4>
                                     <p id="botStatusMessage" class="text-sm text-gray-400"></p>
-                                    <p id="botLastTested" class="text-xs text-gray-500 mt-1"></p>
-                                </div>
-                                <div class="ml-auto">
-                                    <button onclick="testBotConnection()" class="btn-success">
-                                        <i class="fas fa-wifi mr-2"></i>ทดสอบการเชื่อมต่อ
-                                    </button>
+                                    <p id="botLastTested" class="text-xs text-gray-500 mt-1">ยังไม่เคยทดสอบ</p>
                                 </div>
                             </div>
                         </div>
@@ -846,57 +878,78 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                                        Channel Access Token
+                                        <i class="fas fa-key mr-1"></i> Channel Access Token
                                         <span class="text-red-400">*</span>
                                     </label>
                                     <input type="password" id="channelAccessToken" 
-                                           class="input-dark w-full" 
-                                           placeholder="กรอก Channel Access Token จาก LINE Developer">
-                                    <p class="text-xs text-gray-400 mt-1">
-                                        ดึงได้จาก LINE Developer Console → Messaging API → Channel access token
-                                    </p>
+                                           class="input-dark w-full token-check" 
+                                           placeholder="Bearer U1234567890abcdef..."
+                                           oninput="checkTokenFormat()">
+                                    <div class="flex items-center mt-1">
+                                        <i class="fas fa-info-circle text-gray-400 mr-1 text-xs"></i>
+                                        <p class="text-xs text-gray-400">
+                                            ดึงได้จาก LINE Developer Console → Messaging API → Channel access token
+                                        </p>
+                                    </div>
+                                    <div id="tokenStatus" class="text-xs mt-1 hidden">
+                                        <i class="fas fa-circle mr-1"></i>
+                                        <span></span>
+                                    </div>
                                 </div>
                                 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                                        Channel Secret
+                                        <i class="fas fa-user-secret mr-1"></i> Channel Secret
                                     </label>
                                     <input type="password" id="channelSecret" 
                                            class="input-dark w-full" 
-                                           placeholder="กรอก Channel Secret">
+                                           placeholder="1234567890abcdef..."
+                                           oninput="checkTokenFormat()">
+                                    <div class="flex items-center mt-1">
+                                        <i class="fas fa-info-circle text-gray-400 mr-1 text-xs"></i>
+                                        <p class="text-xs text-gray-400">
+                                            สำหรับการตรวจสอบ Webhook (ไม่บังคับ)
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                                        <i class="fas fa-robot mr-1"></i> ชื่อบอท
+                                    </label>
+                                    <input type="text" id="botNameInput" 
+                                           class="input-dark w-full auto-fill-field" 
+                                           placeholder="ระบบจะดึงชื่อบอทอัตโนมัติ">
                                     <p class="text-xs text-gray-400 mt-1">
-                                        สำหรับการตรวจสอบ Webhook (ไม่บังคับ)
+                                        จะถูกดึงอัตโนมัติเมื่อตั้งค่า Token สำเร็จ
                                     </p>
                                 </div>
                                 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                                        ชื่อบอท
-                                    </label>
-                                    <input type="text" id="botNameInput" 
-                                           class="input-dark w-full" 
-                                           placeholder="ระบบยืมคืนออนไลน์">
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">
-                                        URL รูปภาพบอท
+                                        <i class="fas fa-image mr-1"></i> URL รูปภาพบอท
                                     </label>
                                     <input type="text" id="botPictureUrl" 
-                                           class="input-dark w-full" 
-                                           placeholder="https://example.com/bot-image.jpg">
+                                           class="input-dark w-full auto-fill-field" 
+                                           placeholder="ระบบจะดึง URL รูปภาพอัตโนมัติ">
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        จะถูกดึงอัตโนมัติเมื่อตั้งค่า Token สำเร็จ
+                                    </p>
                                 </div>
                                 
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                                        ID กลุ่มแจ้งเตือนแอดมิน
+                                        <i class="fas fa-users mr-1"></i> ID กลุ่มแจ้งเตือนแอดมิน
                                     </label>
                                     <input type="text" id="adminNotifyGroup" 
                                            class="input-dark w-full" 
                                            placeholder="C1234567890abcdef...">
-                                    <p class="text-xs text-gray-400 mt-1">
-                                        สำหรับส่งการแจ้งเตือนไปยังกลุ่ม LINE (ไม่บังคับ)
-                                    </p>
+                                    <div class="flex items-center mt-1">
+                                        <i class="fas fa-info-circle text-gray-400 mr-1 text-xs"></i>
+                                        <p class="text-xs text-gray-400">
+                                            สำหรับส่งการแจ้งเตือนไปยังกลุ่ม LINE (ไม่บังคับ)
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -914,7 +967,7 @@
                                         <p class="text-sm text-gray-400">เปิด/ปิด การแจ้งเตือนทั้งหมด</p>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="notificationEnabled" class="sr-only peer">
+                                        <input type="checkbox" id="notificationEnabled" class="sr-only peer" checked>
                                         <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                                     </label>
                                 </div>
@@ -983,28 +1036,8 @@
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" id="notifyOverdue" class="sr-only peer" checked>
                                             <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                        </label>
+                                    </label>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Notification History -->
-                        <div class="mb-8">
-                            <div class="flex justify-between items-center mb-4">
-                                <h4 class="text-lg font-bold">
-                                    <i class="fas fa-history mr-2 text-blue-400"></i>ประวัติการแจ้งเตือน
-                                </h4>
-                                <button onclick="refreshNotificationHistory()" class="dark-btn px-4 py-2 rounded-xl">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                            </div>
-                            
-                            <div id="notificationHistory" class="space-y-3 max-h-64 overflow-y-auto scrollbar-thin p-2">
-                                <!-- Notification history will be loaded here -->
-                                <div class="text-center py-8 text-gray-500">
-                                    <i class="fas fa-bell-slash text-2xl mb-2"></i>
-                                    <p>ไม่มีประวัติการแจ้งเตือน</p>
                                 </div>
                             </div>
                         </div>
@@ -1185,115 +1218,7 @@
         </div>
     </div>
 
-    <!-- Role Change Modal -->
-    <div id="roleModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
-        <div class="dark-card p-6 w-full max-w-md border border-gray-800">
-            <h3 class="text-xl font-bold mb-4" id="roleModalTitle">เปลี่ยนบทบาทผู้ใช้</h3>
-            
-            <div class="space-y-4">
-                <div class="p-4 bg-gray-800/50 rounded-xl border border-gray-800">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <img id="targetUserAvatar" class="w-12 h-12 rounded-full border-2 border-gray-700" src="" alt="">
-                        <div>
-                            <h4 id="targetUserName" class="font-bold"></h4>
-                            <p id="targetUserLineId" class="text-sm text-gray-400"></p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-400">บทบาทปัจจุบัน</p>
-                            <span id="currentRole" class="badge-user"></span>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-400">วันที่สมัคร</p>
-                            <p id="userCreatedAt" class="text-sm"></p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-3">เลือกบทบาทใหม่</label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <button onclick="selectRole('user')" id="roleUserBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-blue-500 hover:bg-blue-900/20 transition">
-                            <i class="fas fa-user text-blue-400 text-lg mb-2"></i>
-                            <p class="text-sm font-medium">ผู้ใช้</p>
-                        </button>
-                        <button onclick="selectRole('admin')" id="roleAdminBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-purple-500 hover:bg-purple-900/20 transition">
-                            <i class="fas fa-user-shield text-purple-400 text-lg mb-2"></i>
-                            <p class="text-sm font-medium">แอดมิน</p>
-                        </button>
-                        <button onclick="selectRole('superadmin')" id="roleSuperAdminBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-orange-500 hover:bg-orange-900/20 transition">
-                            <i class="fas fa-crown text-orange-400 text-lg mb-2"></i>
-                            <p class="text-sm font-medium">ซุปเปอร์แอดมิน</p>
-                        </button>
-                    </div>
-                </div>
-                
-                <input type="hidden" id="targetUserId">
-                <input type="hidden" id="selectedRole" value="user">
-            </div>
-            
-            <div class="flex justify-end space-x-3 mt-6">
-                <button onclick="closeRoleModal()" class="btn-danger">ยกเลิก</button>
-                <button onclick="updateUserRole()" class="btn-success">ยืนยัน</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- User Status Modal -->
-    <div id="userStatusModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
-        <div class="dark-card p-6 w-full max-w-md border border-gray-800">
-            <h3 class="text-xl font-bold mb-4" id="userStatusModalTitle">จัดการสถานะผู้ใช้</h3>
-            
-            <div class="space-y-4">
-                <div class="p-4 bg-gray-800/50 rounded-xl border border-gray-800">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <img id="statusUserAvatar" class="w-12 h-12 rounded-full border-2 border-gray-700" src="" alt="">
-                        <div>
-                            <h4 id="statusUserName" class="font-bold"></h4>
-                            <p id="statusUserLineId" class="text-sm text-gray-400"></p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-400">บทบาท</p>
-                            <span id="statusUserRole" class="badge-user"></span>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-400">สถานะปัจจุบัน</p>
-                            <span id="currentUserStatus" class="font-semibold"></span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-3">เปลี่ยนสถานะเป็น</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="selectUserStatus('active')" id="statusActiveBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-green-500 hover:bg-green-900/20 transition">
-                            <i class="fas fa-check-circle text-green-400 text-lg mb-2"></i>
-                            <p class="text-sm font-medium">เปิดใช้งาน</p>
-                        </button>
-                        <button onclick="selectUserStatus('inactive')" id="statusInactiveBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-red-500 hover:bg-red-900/20 transition">
-                            <i class="fas fa-ban text-red-400 text-lg mb-2"></i>
-                            <p class="text-sm font-medium">ปิดการใช้งาน</p>
-                        </button>
-                    </div>
-                </div>
-                
-                <input type="hidden" id="statusTargetUserId">
-                <input type="hidden" id="selectedUserStatus" value="active">
-            </div>
-            
-            <div class="flex justify-end space-x-3 mt-6">
-                <button onclick="closeUserStatusModal()" class="btn-danger">ยกเลิก</button>
-                <button onclick="updateUserStatus()" class="btn-success">ยืนยัน</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- User Details Modal (Dynamic) -->
-    <div id="userDetailsModalContainer"></div>
-
+    <!-- JavaScript Application -->
     <script>
         // =============================================
         // Configuration
@@ -1320,8 +1245,56 @@
         let editItemId = null;
 
         // =============================================
-        // UI Functions
+        // Utility Functions
         // =============================================
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                return date.toLocaleDateString('th-TH', options);
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffSec = Math.floor(diffMs / 1000);
+                const diffMin = Math.floor(diffSec / 60);
+                const diffHour = Math.floor(diffMin / 60);
+                const diffDay = Math.floor(diffHour / 24);
+                
+                if (diffDay > 0) return `${diffDay} วันที่แล้ว`;
+                if (diffHour > 0) return `${diffHour} ชั่วโมงที่แล้ว`;
+                if (diffMin > 0) return `${diffMin} นาทีที่แล้ว`;
+                return 'เมื่อสักครู่';
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function getCategoryName(category) {
+            const categories = {
+                'book': 'หนังสือ',
+                'electronic': 'อุปกรณ์อิเล็กทรอนิกส์',
+                'tool': 'เครื่องมือ',
+                'sport': 'กีฬา',
+                'other': 'อื่นๆ'
+            };
+            return categories[category] || category;
+        }
+
         function showMessage(type, title, text, timer = 3000) {
             const Toast = Swal.mixin({
                 toast: true,
@@ -1389,73 +1362,6 @@
             }
         }
 
-        function toggleTheme() {
-            const themeIcon = document.querySelector('button[onclick="toggleTheme()"] i');
-            if (themeIcon.classList.contains('fa-moon')) {
-                themeIcon.classList.remove('fa-moon', 'text-yellow-400');
-                themeIcon.classList.add('fa-sun', 'text-yellow-300');
-                document.body.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
-                document.body.style.color = '#1e293b';
-                document.querySelectorAll('.dark-card').forEach(el => {
-                    el.classList.remove('dark-card');
-                    el.classList.add('glass-card');
-                });
-                document.querySelectorAll('.input-dark').forEach(el => {
-                    el.classList.remove('input-dark');
-                    el.classList.add('input-glass');
-                });
-            } else {
-                themeIcon.classList.remove('fa-sun', 'text-yellow-300');
-                themeIcon.classList.add('fa-moon', 'text-yellow-400');
-                document.body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
-                document.body.style.color = '#e2e8f0';
-                document.querySelectorAll('.glass-card').forEach(el => {
-                    el.classList.remove('glass-card');
-                    el.classList.add('dark-card');
-                });
-                document.querySelectorAll('.input-glass').forEach(el => {
-                    el.classList.remove('input-glass');
-                    el.classList.add('input-dark');
-                });
-            }
-        }
-
-        function toggleNotifications() {
-            const dropdown = document.getElementById('notificationDropdown');
-            dropdown.classList.toggle('hidden');
-            if (!dropdown.classList.contains('hidden')) {
-                loadNotifications();
-            }
-        }
-
-        function loadNotifications() {
-            const notificationList = document.getElementById('notificationList');
-            if (notifications.length === 0) {
-                notificationList.innerHTML = `
-                    <div class="p-4 text-center">
-                        <i class="fas fa-bell-slash text-gray-400 text-2xl mb-2"></i>
-                        <p class="text-gray-400">ไม่มีการแจ้งเตือน</p>
-                    </div>
-                `;
-                return;
-            }
-
-            notificationList.innerHTML = notifications.map(notif => `
-                <div class="p-4 border-b border-gray-800 hover:bg-gray-800/30 transition">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-${notif.icon || 'bell'} text-${notif.type}-400"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium">${notif.title}</p>
-                            <p class="text-sm text-gray-400 mt-1">${notif.message}</p>
-                            <p class="text-xs text-gray-500 mt-1">${formatTime(notif.timestamp)}</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
         function showLoading() {
             document.getElementById('loadingOverlay').classList.remove('hidden');
         }
@@ -1507,146 +1413,435 @@
             }
         }
 
-        function updateUserUI(user) {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-            document.getElementById('authButtons').classList.add('hidden');
-            document.getElementById('userInfo').classList.remove('hidden');
+        // =============================================
+        // LINE Bot Functions (ใหม่)
+        // =============================================
+        let debounceTimer;
+
+        function checkTokenFormat() {
+            const tokenInput = document.getElementById('channelAccessToken');
+            const token = tokenInput.value.trim();
+            const tokenStatus = document.getElementById('tokenStatus');
             
-            document.getElementById('userName').textContent = user.displayName;
-            document.getElementById('userLineId').textContent = user.lineId;
+            clearTimeout(debounceTimer);
             
-            const roleText = user.role === 'admin' ? 'แอดมิน' : 
-                            user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
-            const roleClass = user.role === 'admin' ? 'badge-admin' : 
-                            user.role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
-            
-            document.getElementById('userRoleBadge').textContent = roleText;
-            document.getElementById('userRoleBadge').className = roleClass;
-            
-            const avatarUrl = user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`;
-            document.getElementById('userAvatar').src = avatarUrl;
-            
-            document.getElementById('welcomeMessage').textContent = `ยินดีต้อนรับ, ${user.displayName}!`;
-            
-            if (user.role === 'admin' || user.role === 'superadmin') {
-                document.getElementById('adminPanelBtn').classList.remove('hidden');
+            if (!token) {
+                tokenInput.classList.remove('token-valid', 'token-invalid');
+                tokenStatus.classList.add('hidden');
+                return;
             }
             
-            loadDashboardData();
+            // ตรวจสอบรูปแบบ token
+            const isValid = token.startsWith('Bearer ') || token.startsWith('U') || token.startsWith('R');
             
-            if (notifications.length > 0) {
-                showNotification('info', 'การแจ้งเตือนใหม่', `คุณมี ${notifications.length} การแจ้งเตือนใหม่`);
+            if (isValid) {
+                tokenInput.classList.add('token-valid');
+                tokenInput.classList.remove('token-invalid');
+                tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
+                tokenStatus.classList.remove('hidden');
+                
+                // รอ 1.5 วินาทีแล้วดึงข้อมูลบอทอัตโนมัติ
+                debounceTimer = setTimeout(() => {
+                    autoDetectBotInfo();
+                }, 1500);
+                
+            } else {
+                tokenInput.classList.add('token-invalid');
+                tokenInput.classList.remove('token-valid');
+                tokenStatus.innerHTML = '<i class="fas fa-exclamation-circle text-red-400 mr-1"></i><span class="text-red-400">รูปแบบ Token อาจไม่ถูกต้อง</span>';
+                tokenStatus.classList.remove('hidden');
             }
         }
 
-        function openAddItemModal() {
-            editItemId = null;
-            document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
-            document.getElementById('saveItemBtn').textContent = 'บันทึก';
-            document.getElementById('addItemModal').classList.remove('hidden');
+        async function autoDetectBotInfo() {
+            const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+            const channelSecret = document.getElementById('channelSecret').value.trim();
             
-            document.getElementById('itemIdInput').value = '';
-            document.getElementById('itemNameInput').value = '';
-            document.getElementById('itemDescInput').value = '';
-            document.getElementById('itemLocationInput').value = '';
-            document.getElementById('itemImageInput').value = '';
-            document.getElementById('itemQuantityInput').value = '1';
-            document.getElementById('itemCategoryInput').value = 'book';
-        }
-
-        function closeItemModal() {
-            document.getElementById('addItemModal').classList.add('hidden');
-            editItemId = null;
-        }
-
-        function openRoleModal(user) {
-            document.getElementById('targetUserId').value = user.uid;
-            document.getElementById('targetUserName').textContent = user.displayName;
-            document.getElementById('targetUserLineId').textContent = user.lineId;
-            document.getElementById('currentRole').textContent = 
-                user.role === 'admin' ? 'แอดมิน' : 
-                user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
-            document.getElementById('userCreatedAt').textContent = formatDate(user.createdAt);
-            document.getElementById('targetUserAvatar').src = 
-                user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`;
+            // ตรวจสอบว่ามีข้อมูลครบหรือไม่
+            if (!channelAccessToken || !channelSecret) {
+                return;
+            }
             
-            selectRole(user.role);
+            // ตรวจสอบรูปแบบ token
+            if (!channelAccessToken.startsWith('Bearer ') && 
+                !channelAccessToken.startsWith('U') && 
+                !channelAccessToken.startsWith('R')) {
+                return;
+            }
             
-            document.getElementById('roleModal').classList.remove('hidden');
-        }
-
-        function closeRoleModal() {
-            document.getElementById('roleModal').classList.add('hidden');
-        }
-
-        function selectRole(role) {
-            document.getElementById('selectedRole').value = role;
-            
-            ['roleUserBtn', 'roleAdminBtn', 'roleSuperAdminBtn'].forEach(id => {
-                const btn = document.getElementById(id);
-                btn.classList.remove('border-blue-500', 'bg-blue-900/20', 'border-purple-500', 'bg-purple-900/20', 'border-orange-500', 'bg-orange-900/20');
-                btn.classList.add('border-gray-700');
-            });
-            
-            const selectedBtn = document.getElementById(`role${role.charAt(0).toUpperCase() + role.slice(1)}Btn`);
-            if (selectedBtn) {
-                selectedBtn.classList.remove('border-gray-700');
-                if (role === 'user') {
-                    selectedBtn.classList.add('border-blue-500', 'bg-blue-900/20');
-                } else if (role === 'admin') {
-                    selectedBtn.classList.add('border-purple-500', 'bg-purple-900/20');
+            try {
+                // แสดงสถานะกำลังตรวจสอบ
+                updateBotConnectionStatus({
+                    status: 'checking',
+                    message: 'กำลังตรวจสอบข้อมูลบอท...'
+                });
+                
+                // เรียก API เพื่อดึงข้อมูลบอท
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'getBotProfile',
+                        uid: currentUser?.uid || '',
+                        channelAccessToken: channelAccessToken,
+                        channelSecret: channelSecret
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.botInfo) {
+                    const botInfo = result.botInfo;
+                    
+                    // เติมข้อมูลลงในฟิลด์
+                    const botNameInput = document.getElementById('botNameInput');
+                    const botPictureUrl = document.getElementById('botPictureUrl');
+                    
+                    if (botInfo.displayName) {
+                        botNameInput.value = botInfo.displayName;
+                        botNameInput.classList.add('auto-fill-success');
+                        setTimeout(() => {
+                            botNameInput.classList.remove('auto-fill-success');
+                        }, 1500);
+                    }
+                    
+                    if (botInfo.pictureUrl) {
+                        botPictureUrl.value = botInfo.pictureUrl;
+                        botPictureUrl.classList.add('auto-fill-success');
+                        setTimeout(() => {
+                            botPictureUrl.classList.remove('auto-fill-success');
+                        }, 1500);
+                    }
+                    
+                    // อัพเดตการแสดงผล
+                    updateBotConnectionStatus({
+                        status: 'connected',
+                        botName: botInfo.displayName,
+                        pictureUrl: botInfo.pictureUrl,
+                        statusMessage: botInfo.statusMessage || 'ระบบยืมคืนออนไลน์'
+                    });
+                    
+                    // แสดงการแจ้งเตือน
+                    showNotification('success', 'ดึงข้อมูลบอทสำเร็จ', 'ระบบได้ดึงข้อมูลบอทอัตโนมัติแล้ว');
+                    
                 } else {
-                    selectedBtn.classList.add('border-orange-500', 'bg-orange-900/20');
+                    updateBotConnectionStatus({
+                        status: 'connection_failed',
+                        message: result.message || 'ไม่สามารถดึงข้อมูลบอทได้'
+                    });
                 }
+                
+            } catch (error) {
+                console.error('Auto-detect bot info failed:', error);
+                updateBotConnectionStatus({
+                    status: 'connection_failed',
+                    message: 'เกิดข้อผิดพลาดในการดึงข้อมูล'
+                });
             }
         }
 
-        function openUserStatusModal(user) {
-            document.getElementById('statusTargetUserId').value = user.uid;
-            document.getElementById('statusUserName').textContent = user.displayName;
-            document.getElementById('statusUserLineId').textContent = user.lineId;
-            
-            const roleText = user.role === 'admin' ? 'แอดมิน' : 
-                            user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
-            const roleClass = user.role === 'admin' ? 'badge-admin' : 
-                            user.role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
-            
-            document.getElementById('statusUserRole').textContent = roleText;
-            document.getElementById('statusUserRole').className = roleClass;
-            
-            document.getElementById('currentUserStatus').textContent = user.status === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน';
-            document.getElementById('currentUserStatus').className = user.status === 'active' ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold';
-            
-            document.getElementById('statusUserAvatar').src = 
-                user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`;
-            
-            selectUserStatus(user.status);
-            
-            document.getElementById('userStatusModal').classList.remove('hidden');
-        }
-
-        function closeUserStatusModal() {
-            document.getElementById('userStatusModal').classList.add('hidden');
-        }
-
-        function selectUserStatus(status) {
-            document.getElementById('selectedUserStatus').value = status;
-            
-            ['statusActiveBtn', 'statusInactiveBtn'].forEach(id => {
-                const btn = document.getElementById(id);
-                btn.classList.remove('border-green-500', 'bg-green-900/20', 'border-red-500', 'bg-red-900/20');
-                btn.classList.add('border-gray-700');
-            });
-            
-            const selectedBtn = document.getElementById(`status${status.charAt(0).toUpperCase() + status.slice(1)}Btn`);
-            if (selectedBtn) {
-                selectedBtn.classList.remove('border-gray-700');
-                if (status === 'active') {
-                    selectedBtn.classList.add('border-green-500', 'bg-green-900/20');
-                } else {
-                    selectedBtn.classList.add('border-red-500', 'bg-red-900/20');
+        async function loadBotSettings() {
+            try {
+                const data = await callAPI('getBotSettings');
+                
+                if (data.success && data.settings) {
+                    const channelAccessToken = document.getElementById('channelAccessToken');
+                    const channelSecret = document.getElementById('channelSecret');
+                    const botNameInput = document.getElementById('botNameInput');
+                    const botPictureUrl = document.getElementById('botPictureUrl');
+                    
+                    // เติมค่าจากการตั้งค่า
+                    channelAccessToken.value = data.settings.channel_access_token?.value || '';
+                    channelSecret.value = data.settings.channel_secret?.value || '';
+                    botNameInput.value = data.settings.bot_name?.value || '';
+                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
+                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
+                    
+                    // ตั้งค่า toggle switches
+                    document.getElementById('notificationEnabled').checked = data.settings.notification_enabled?.value === 'true';
+                    document.getElementById('notifyOnRequest').checked = data.settings.notify_on_request?.value === 'true';
+                    document.getElementById('notifyOnApprove').checked = data.settings.notify_on_approve?.value === 'true';
+                    document.getElementById('notifyOnReject').checked = data.settings.notify_on_reject?.value === 'true';
+                    document.getElementById('notifyOnReturn').checked = data.settings.notify_on_return?.value === 'true';
+                    document.getElementById('notifyDueReminder').checked = data.settings.notify_due_reminder?.value === 'true';
+                    document.getElementById('notifyOverdue').checked = data.settings.notify_overdue?.value === 'true';
+                    
+                    // ตรวจสอบ token และดึงข้อมูลหากมี
+                    if (channelAccessToken.value.trim()) {
+                        checkTokenFormat();
+                    }
                 }
+                
+            } catch (error) {
+                showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
+            }
+        }
+
+        async function saveBotSettings() {
+            try {
+                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+                
+                if (!channelAccessToken) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'กรุณากรอก Channel Access Token',
+                        text: 'ต้องมี Channel Access Token เพื่อใช้งาน LINE Bot',
+                        confirmButtonText: 'ตกลง',
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    return;
+                }
+                
+                // ตรวจสอบรูปแบบ token
+                if (!channelAccessToken.startsWith('Bearer ') && 
+                    !channelAccessToken.startsWith('U') && 
+                    !channelAccessToken.startsWith('R')) {
+                    
+                    const { value: confirm } = await Swal.fire({
+                        icon: 'question',
+                        title: 'รูปแบบ Token อาจไม่ถูกต้อง',
+                        html: `Channel Access Token ของคุณดูเหมือนจะไม่ใช่รูปแบบมาตรฐาน<br>
+                              <small>รูปแบบมาตรฐานควรขึ้นต้นด้วย "Bearer ", "U" หรือ "R"</small>`,
+                        showCancelButton: true,
+                        confirmButtonText: 'ใช้ตามนี้',
+                        cancelButtonText: 'แก้ไข',
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    
+                    if (!confirm) {
+                        document.getElementById('channelAccessToken').focus();
+                        return;
+                    }
+                }
+                
+                const settings = {
+                    channel_access_token: {
+                        value: channelAccessToken,
+                        description: 'Channel Access Token สำหรับ LINE Messaging API',
+                        isActive: true
+                    },
+                    channel_secret: {
+                        value: document.getElementById('channelSecret').value.trim(),
+                        description: 'Channel Secret สำหรับ LINE Messaging API',
+                        isActive: true
+                    },
+                    bot_name: {
+                        value: document.getElementById('botNameInput').value.trim(),
+                        description: 'ชื่อของบอทที่แสดงใน LINE',
+                        isActive: true
+                    },
+                    bot_picture_url: {
+                        value: document.getElementById('botPictureUrl').value.trim(),
+                        description: 'URL รูปภาพโปรไฟล์บอท',
+                        isActive: true
+                    },
+                    admin_notify_group: {
+                        value: document.getElementById('adminNotifyGroup').value.trim(),
+                        description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
+                        isActive: true
+                    },
+                    notification_enabled: {
+                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
+                        description: 'เปิดใช้งานการแจ้งเตือน',
+                        isActive: true
+                    },
+                    notify_on_request: {
+                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
+                        isActive: true
+                    },
+                    notify_on_approve: {
+                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
+                        isActive: true
+                    },
+                    notify_on_reject: {
+                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
+                        isActive: true
+                    },
+                    notify_on_return: {
+                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อมีการคืนของ',
+                        isActive: true
+                    },
+                    notify_due_reminder: {
+                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
+                        isActive: true
+                    },
+                    notify_overdue: {
+                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
+                        isActive: true
+                    }
+                };
+                
+                const result = await callAPI('updateBotSettings', {
+                    settings: JSON.stringify(settings)
+                });
+                
+                if (result.success) {
+                    showMessage('success', 'บันทึกสำเร็จ', 'บันทึกการตั้งค่า LINE Bot สำเร็จ!');
+                    
+                    // อัพเดตสถานะการเชื่อมต่อ
+                    if (channelAccessToken) {
+                        updateBotConnectionStatus({
+                            status: 'connected',
+                            botName: settings.bot_name.value || 'LINE Bot'
+                        });
+                    }
+                }
+                
+            } catch (error) {
+                showMessage('error', 'ไม่สามารถบันทึกได้', error.message);
+            }
+        }
+
+        async function testBotConnection() {
+            try {
+                showLoading();
+                
+                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+                
+                if (!channelAccessToken) {
+                    showMessage('error', 'กรุณากรอก Channel Access Token ก่อน', 'ต้องมี Token ในการทดสอบการเชื่อมต่อ');
+                    hideLoading();
+                    return;
+                }
+                
+                const result = await callAPI('testBotConnection');
+                
+                if (result.success) {
+                    const testResult = result.testResult;
+                    
+                    if (testResult.success) {
+                        const botName = result.botName || testResult.botInfo?.displayName || 'LINE Bot';
+                        
+                        // อัพเดตข้อมูลในฟอร์ม
+                        const botNameInput = document.getElementById('botNameInput');
+                        const botPictureUrl = document.getElementById('botPictureUrl');
+                        
+                        // เติมข้อมูลถ้ายังว่างอยู่
+                        if (!botNameInput.value.trim() && testResult.botInfo?.displayName) {
+                            botNameInput.value = testResult.botInfo.displayName;
+                        }
+                        
+                        if (!botPictureUrl.value.trim() && testResult.botInfo?.pictureUrl) {
+                            botPictureUrl.value = testResult.botInfo.pictureUrl;
+                        }
+                        
+                        // อัพเดตข้อมูลการแสดงผล
+                        updateBotInfo(testResult.botInfo);
+                        
+                        showMessage('success', 'ทดสอบสำเร็จ', `เชื่อมต่อกับ LINE Bot "${botName}" สำเร็จ!`);
+                        
+                    } else {
+                        showMessage('error', 'ทดสอบล้มเหลว', result.message || 'ไม่สามารถเชื่อมต่อกับ LINE Bot ได้');
+                    }
+                }
+                
+                hideLoading();
+                
+            } catch (error) {
+                hideLoading();
+                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
+            }
+        }
+
+        function updateBotConnectionStatus(status) {
+            const statusIndicator = document.getElementById('botStatusIndicator');
+            const statusText = document.getElementById('botStatusText');
+            const botInfoCard = document.getElementById('botInfoCard');
+            const connectionStatusDiv = document.getElementById('botConnectionStatus');
+            
+            if (!status) return;
+            
+            switch(status.status) {
+                case 'checking':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500 animate-pulse';
+                    statusText.textContent = status.message || 'กำลังตรวจสอบ...';
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
+                    botInfoCard.classList.add('hidden');
+                    break;
+                    
+                case 'connected':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
+                    statusText.textContent = 'เชื่อมต่อแล้ว: ' + (status.botName || 'LINE Bot');
+                    connectionStatusDiv.querySelector('div').classList.add('bot-status-connected');
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-disconnected');
+                    botInfoCard.classList.remove('hidden');
+                    
+                    // อัพเดตข้อมูลบอท
+                    updateBotInfo({
+                        displayName: status.botName,
+                        pictureUrl: status.pictureUrl,
+                        statusMessage: status.statusMessage
+                    });
+                    break;
+                    
+                case 'not_configured':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
+                    statusText.textContent = 'ยังไม่ได้ตั้งค่า';
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
+                    botInfoCard.classList.add('hidden');
+                    break;
+                    
+                case 'connection_failed':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+                    statusText.textContent = status.message || 'เชื่อมต่อล้มเหลว';
+                    connectionStatusDiv.querySelector('div').classList.add('bot-status-disconnected');
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected');
+                    botInfoCard.classList.remove('hidden');
+                    break;
+                    
+                default:
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-500';
+                    statusText.textContent = 'ไม่ทราบสถานะ';
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
+                    botInfoCard.classList.add('hidden');
+            }
+        }
+
+        function updateBotInfo(info) {
+            if (!info) return;
+            
+            const botPicture = document.getElementById('botPicture');
+            const botName = document.getElementById('botName');
+            const botStatusMessage = document.getElementById('botStatusMessage');
+            const botLastTested = document.getElementById('botLastTested');
+            
+            // ตั้งค่ารูปภาพ
+            if (info.pictureUrl) {
+                botPicture.src = info.pictureUrl;
+            } else {
+                // ถ้าไม่มีรูป ให้ใช้ avatar ตามชื่อ
+                const displayName = info.displayName || 'Bot';
+                botPicture.src = 'https://ui-avatars.com/api/?name=' + 
+                    encodeURIComponent(displayName) + 
+                    '&background=00C300&color=fff&size=128';
+            }
+            
+            botName.textContent = info.displayName || 'LINE Bot';
+            botStatusMessage.textContent = info.statusMessage || 'ระบบยืมคืนออนไลน์';
+            
+            // อัพเดตเวลาทดสอบล่าสุด
+            botLastTested.textContent = 'ทดสอบล่าสุด: ' + formatTime(new Date());
+            
+            // อัพเดตข้อมูลในฟอร์มถ้ายังว่าง
+            const botNameInput = document.getElementById('botNameInput');
+            const botPictureUrl = document.getElementById('botPictureUrl');
+            
+            if (info.displayName && !botNameInput.value.trim()) {
+                botNameInput.value = info.displayName;
+            }
+            
+            if (info.pictureUrl && !botPictureUrl.value.trim()) {
+                botPictureUrl.value = info.pictureUrl;
             }
         }
 
@@ -1806,6 +2001,120 @@
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
+        }
+
+        // =============================================
+        // User Interface Functions
+        // =============================================
+        function updateUserUI(user) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            document.getElementById('authButtons').classList.add('hidden');
+            document.getElementById('userInfo').classList.remove('hidden');
+            
+            document.getElementById('userName').textContent = user.displayName;
+            document.getElementById('userLineId').textContent = user.lineId;
+            
+            const roleText = user.role === 'admin' ? 'แอดมิน' : 
+                            user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
+            const roleClass = user.role === 'admin' ? 'badge-admin' : 
+                            user.role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
+            
+            document.getElementById('userRoleBadge').textContent = roleText;
+            document.getElementById('userRoleBadge').className = roleClass;
+            
+            const avatarUrl = user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`;
+            document.getElementById('userAvatar').src = avatarUrl;
+            
+            document.getElementById('welcomeMessage').textContent = `ยินดีต้อนรับ, ${user.displayName}!`;
+            
+            if (user.role === 'admin' || user.role === 'superadmin') {
+                document.getElementById('adminPanelBtn').classList.remove('hidden');
+            }
+            
+            loadDashboardData();
+            
+            if (notifications.length > 0) {
+                showNotification('info', 'การแจ้งเตือนใหม่', `คุณมี ${notifications.length} การแจ้งเตือนใหม่`);
+            }
+        }
+
+        function updateNotificationCount() {
+            const count = notifications.length;
+            const badge = document.getElementById('notificationCount');
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function toggleTheme() {
+            const themeIcon = document.querySelector('button[onclick="toggleTheme()"] i');
+            if (themeIcon.classList.contains('fa-moon')) {
+                themeIcon.classList.remove('fa-moon', 'text-yellow-400');
+                themeIcon.classList.add('fa-sun', 'text-yellow-300');
+                document.body.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
+                document.body.style.color = '#1e293b';
+                document.querySelectorAll('.dark-card').forEach(el => {
+                    el.classList.remove('dark-card');
+                    el.classList.add('glass-card');
+                });
+                document.querySelectorAll('.input-dark').forEach(el => {
+                    el.classList.remove('input-dark');
+                    el.classList.add('input-glass');
+                });
+            } else {
+                themeIcon.classList.remove('fa-sun', 'text-yellow-300');
+                themeIcon.classList.add('fa-moon', 'text-yellow-400');
+                document.body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
+                document.body.style.color = '#e2e8f0';
+                document.querySelectorAll('.glass-card').forEach(el => {
+                    el.classList.remove('glass-card');
+                    el.classList.add('dark-card');
+                });
+                document.querySelectorAll('.input-glass').forEach(el => {
+                    el.classList.remove('input-glass');
+                    el.classList.add('input-dark');
+                });
+            }
+        }
+
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.classList.toggle('hidden');
+            if (!dropdown.classList.contains('hidden')) {
+                loadNotifications();
+            }
+        }
+
+        function loadNotifications() {
+            const notificationList = document.getElementById('notificationList');
+            if (notifications.length === 0) {
+                notificationList.innerHTML = `
+                    <div class="p-4 text-center">
+                        <i class="fas fa-bell-slash text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-gray-400">ไม่มีการแจ้งเตือน</p>
+                    </div>
+                `;
+                return;
+            }
+
+            notificationList.innerHTML = notifications.map(notif => `
+                <div class="p-4 border-b border-gray-800 hover:bg-gray-800/30 transition">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-${notif.icon || 'bell'} text-${notif.type}-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium">${notif.title}</p>
+                            <p class="text-sm text-gray-400 mt-1">${notif.message}</p>
+                            <p class="text-xs text-gray-500 mt-1">${formatTime(notif.timestamp)}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // =============================================
@@ -2198,7 +2507,7 @@
         }
 
         // =============================================
-        // Admin Functions - Pending Requests
+        // Admin Functions
         // =============================================
         async function loadPendingRequests() {
             try {
@@ -2404,9 +2713,6 @@
             }
         }
 
-        // =============================================
-        // Admin Functions - Manage Items
-        // =============================================
         async function loadItemsForManagement() {
             try {
                 const data = await callAPI('getItemsForManagement');
@@ -2616,9 +2922,26 @@
             });
         }
 
-        // =============================================
-        // Admin Functions - Manage Users
-        // =============================================
+        function openAddItemModal() {
+            editItemId = null;
+            document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
+            document.getElementById('saveItemBtn').textContent = 'บันทึก';
+            document.getElementById('addItemModal').classList.remove('hidden');
+            
+            document.getElementById('itemIdInput').value = '';
+            document.getElementById('itemNameInput').value = '';
+            document.getElementById('itemDescInput').value = '';
+            document.getElementById('itemLocationInput').value = '';
+            document.getElementById('itemImageInput').value = '';
+            document.getElementById('itemQuantityInput').value = '1';
+            document.getElementById('itemCategoryInput').value = 'book';
+        }
+
+        function closeItemModal() {
+            document.getElementById('addItemModal').classList.add('hidden');
+            editItemId = null;
+        }
+
         async function loadUsers() {
             try {
                 document.getElementById('usersLoading').classList.remove('hidden');
@@ -2697,37 +3020,26 @@
                                 class="btn-primary text-sm">
                             <i class="fas fa-eye mr-2"></i>ดูรายละเอียด
                         </button>
-                        
-                        ${currentUser.uid !== user.uid ? `
-                            <button onclick="openUserStatusModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
-                                    class="btn-warning text-sm">
-                                <i class="fas fa-user-cog mr-2"></i>สถานะ
-                            </button>
-                        ` : ''}
-                        
-                        ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
-                            <button onclick="openRoleModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
-                                    class="btn-purple text-sm">
-                                <i class="fas fa-user-shield mr-2"></i>บทบาท
-                            </button>
-                        ` : ''}
                     </div>
                 </div>
             `).join('');
         }
 
-        async function loadUserDetails(userId) {
-            try {
-                const data = await callAPI('getUserDetails', {
-                    targetUserId: userId
-                });
-                
-                if (data.success) {
-                    showUserDetailsModal(data.user);
-                }
-            } catch (error) {
-                showMessage('error', 'ไม่สามารถโหลดข้อมูลได้', error.message);
-            }
+        function getRoleBadgeClass(role) {
+            return role === 'admin' ? 'badge-admin' : 
+                   role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
+        }
+
+        function updateUserStats(users) {
+            const totalUsers = users.length;
+            const regularUsers = users.filter(u => u.role === 'user').length;
+            const adminUsers = users.filter(u => u.role === 'admin').length;
+            const superadminUsers = users.filter(u => u.role === 'superadmin').length;
+            
+            document.getElementById('totalUsersCount').textContent = totalUsers;
+            document.getElementById('regularUsersCount').textContent = regularUsers;
+            document.getElementById('adminUsersCount').textContent = adminUsers;
+            document.getElementById('superadminUsersCount').textContent = superadminUsers;
         }
 
         async function searchUsersHandler() {
@@ -2750,580 +3062,6 @@
             } catch (error) {
                 showMessage('error', 'ไม่สามารถค้นหาได้', error.message);
             }
-        }
-
-        async function deleteUser(userId, userName) {
-            Swal.fire({
-                title: 'ยืนยันการลบผู้ใช้',
-                html: `คุณต้องการลบผู้ใช้ <b>${userName}</b> ใช่หรือไม่?<br><small>การลบนี้จะลบข้อมูลผู้ใช้ทั้งหมดและไม่สามารถกู้คืนได้</small>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ใช่, ลบเลย',
-                cancelButtonText: 'ยกเลิก',
-                background: '#1e293b',
-                color: '#e2e8f0'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const result = await callAPI('deleteUser', {
-                            targetUserId: userId
-                        });
-                        
-                        if (result.success) {
-                            showMessage('success', 'ลบผู้ใช้สำเร็จ', result.message);
-                            loadUsers();
-                        }
-                    } catch (error) {
-                        showMessage('error', 'ไม่สามารถลบผู้ใช้ได้', error.message);
-                    }
-                }
-            });
-        }
-
-        function updateUserStats(users) {
-            const totalUsers = users.length;
-            const regularUsers = users.filter(u => u.role === 'user').length;
-            const adminUsers = users.filter(u => u.role === 'admin').length;
-            const superadminUsers = users.filter(u => u.role === 'superadmin').length;
-            
-            document.getElementById('totalUsersCount').textContent = totalUsers;
-            document.getElementById('regularUsersCount').textContent = regularUsers;
-            document.getElementById('adminUsersCount').textContent = adminUsers;
-            document.getElementById('superadminUsersCount').textContent = superadminUsers;
-        }
-
-        function showUserDetailsModal(user) {
-            const modalHTML = `
-                <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
-                    <div class="dark-card p-6 w-full max-w-2xl border border-gray-800">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-xl font-bold">รายละเอียดผู้ใช้</h3>
-                            <button onclick="closeUserDetailsModal()" class="text-gray-400 hover:text-white">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="md:col-span-1">
-                                <div class="text-center">
-                                    <img src="${user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`}" 
-                                         class="w-32 h-32 rounded-full mx-auto border-4 border-gray-700 mb-4">
-                                    <h4 class="text-lg font-bold">${user.displayName}</h4>
-                                    <p class="text-gray-400 text-sm">${user.lineId}</p>
-                                    <div class="mt-2">
-                                        <span class="${getRoleBadgeClass(user.role)}">
-                                            ${user.role === 'admin' ? 'แอดมิน' : 
-                                             user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-6 space-y-3">
-                                    <div>
-                                        <p class="text-sm text-gray-400">อีเมล</p>
-                                        <p class="font-medium">${user.email || 'ไม่มีอีเมล'}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-400">สถานะ</p>
-                                        <p class="font-medium ${user.status === 'active' ? 'text-green-400' : 'text-red-400'}">
-                                            ${user.status === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-400">วันที่สมัคร</p>
-                                        <p class="font-medium">${formatDate(user.createdAt)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="md:col-span-2">
-                                <h4 class="font-bold mb-4">สถิติการยืม</h4>
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                                    <div class="dark-card p-4 text-center border border-gray-800">
-                                        <p class="text-gray-400 text-sm">ยืมทั้งหมด</p>
-                                        <p class="text-2xl font-bold">${user.statistics.totalBorrowed || 0}</p>
-                                    </div>
-                                    <div class="dark-card p-4 text-center border border-gray-800">
-                                        <p class="text-gray-400 text-sm">คืนแล้ว</p>
-                                        <p class="text-2xl font-bold text-green-400">${user.statistics.totalReturned || 0}</p>
-                                    </div>
-                                    <div class="dark-card p-4 text-center border border-gray-800">
-                                        <p class="text-gray-400 text-sm">ค้างชำระ</p>
-                                        <p class="text-2xl font-bold ${user.statistics.totalOverdue > 0 ? 'text-red-400' : ''}">
-                                            ${user.statistics.totalOverdue || 0}
-                                        </p>
-                                    </div>
-                                    <div class="dark-card p-4 text-center border border-gray-800">
-                                        <p class="text-gray-400 text-sm">รออนุมัติ</p>
-                                        <p class="text-2xl font-bold text-yellow-400">${user.statistics.totalPending || 0}</p>
-                                    </div>
-                                    <div class="dark-card p-4 text-center border border-gray-800">
-                                        <p class="text-gray-400 text-sm">ถูกปฏิเสธ</p>
-                                        <p class="text-2xl font-bold text-red-400">${user.statistics.totalRejected || 0}</p>
-                                    </div>
-                                    <div class="dark-card p-4 text-center border border-gray-800">
-                                        <p class="text-gray-400 text-sm">กำลังยืม</p>
-                                        <p class="text-2xl font-bold text-blue-400">${user.statistics.activeBorrowings || 0}</p>
-                                    </div>
-                                </div>
-                                
-                                <h4 class="font-bold mb-4">รายการยืมล่าสุด</h4>
-                                <div class="max-h-60 overflow-y-auto scrollbar-thin">
-                                    ${user.recentBorrowings && user.recentBorrowings.length > 0 ? 
-                                        user.recentBorrowings.map(borrow => `
-                                            <div class="dark-card p-3 mb-2 border border-gray-800">
-                                                <div class="flex justify-between items-center">
-                                                    <div>
-                                                        <p class="font-medium">${borrow.itemName}</p>
-                                                        <p class="text-sm text-gray-400">${formatDate(borrow.borrowDate)}</p>
-                                                    </div>
-                                                    <span class="${getStatusClass(borrow.status)}">
-                                                        ${borrow.status === 'borrowed' ? 'กำลังยืม' : 
-                                                         borrow.status === 'returned' ? 'คืนแล้ว' : 
-                                                         borrow.status === 'pending' ? 'รออนุมัติ' : 
-                                                         borrow.status === 'rejected' ? 'ถูกปฏิเสธ' : borrow.status}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        `).join('') : 
-                                        '<p class="text-gray-500 text-center py-4">ไม่มีประวัติการยืม</p>'
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end space-x-3 mt-6">
-                            ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
-                                <button onclick="openRoleModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
-                                        class="btn-purple">
-                                    <i class="fas fa-user-shield mr-2"></i>เปลี่ยนบทบาท
-                                </button>
-                            ` : ''}
-                            
-                            ${currentUser.uid !== user.uid ? `
-                                <button onclick="openUserStatusModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
-                                        class="btn-warning">
-                                    <i class="fas fa-user-cog mr-2"></i>เปลี่ยนสถานะ
-                                </button>
-                            ` : ''}
-                            
-                            ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
-                                <button onclick="deleteUser('${user.uid}', '${user.displayName}')" 
-                                        class="btn-danger">
-                                    <i class="fas fa-trash mr-2"></i>ลบผู้ใช้
-                                </button>
-                            ` : ''}
-                            
-                            <button onclick="closeUserDetailsModal()" class="btn-primary">
-                                ปิด
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            const modalDiv = document.createElement('div');
-            modalDiv.id = 'userDetailsModal';
-            modalDiv.innerHTML = modalHTML;
-            document.getElementById('userDetailsModalContainer').appendChild(modalDiv);
-        }
-
-        function closeUserDetailsModal() {
-            const modal = document.getElementById('userDetailsModal');
-            if (modal) {
-                modal.remove();
-            }
-        }
-
-        function getStatusClass(status) {
-            const statusClasses = {
-                'borrowed': 'status-borrowed',
-                'returned': 'status-returned',
-                'pending': 'status-pending',
-                'rejected': 'status-rejected',
-                'overdue': 'status-overdue'
-            };
-            return statusClasses[status] || 'status-badge';
-        }
-
-        function getRoleBadgeClass(role) {
-            return role === 'admin' ? 'badge-admin' : 
-                   role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
-        }
-
-        async function updateUserRole() {
-            const userId = document.getElementById('targetUserId').value;
-            const newRole = document.getElementById('selectedRole').value;
-            
-            try {
-                const result = await callAPI('updateUserRole', {
-                    targetUserId: userId,
-                    role: newRole
-                });
-                
-                if (result.success) {
-                    const user = currentAdminData.users.find(u => u.uid === userId);
-                    if (user) {
-                        user.role = newRole;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'เปลี่ยนบทบาทสำเร็จ!',
-                        text: result.message || 'เปลี่ยนบทบาทผู้ใช้เรียบร้อยแล้ว',
-                        timer: 3000,
-                        showConfirmButton: false,
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    closeRoleModal();
-                    renderUsers();
-                    
-                    if (currentUser.uid === userId) {
-                        currentUser.role = newRole;
-                        updateUserUI(currentUser);
-                    }
-                }
-                
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ไม่สามารถเปลี่ยนบทบาทได้',
-                    text: error.message,
-                    background: '#1e293b',
-                    color: '#e2e8f0'
-                });
-            }
-        }
-
-        async function updateUserStatus() {
-            const userId = document.getElementById('statusTargetUserId').value;
-            const newStatus = document.getElementById('selectedUserStatus').value;
-            
-            try {
-                const result = await callAPI('updateUserStatus', {
-                    targetUserId: userId,
-                    status: newStatus
-                });
-                
-                if (result.success) {
-                    const user = currentAdminData.users.find(u => u.uid === userId);
-                    if (user) {
-                        user.status = newStatus;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'เปลี่ยนสถานะสำเร็จ!',
-                        text: result.message || 'เปลี่ยนสถานะผู้ใช้เรียบร้อยแล้ว',
-                        timer: 3000,
-                        showConfirmButton: false,
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    closeUserStatusModal();
-                    renderUsers();
-                }
-                
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ไม่สามารถเปลี่ยนสถานะได้',
-                    text: error.message,
-                    background: '#1e293b',
-                    color: '#e2e8f0'
-                });
-            }
-        }
-
-        // =============================================
-        // LINE Bot Functions
-        // =============================================
-
-        async function loadBotSettings() {
-            try {
-                const data = await callAPI('getBotSettings');
-                
-                if (data.success && data.settings) {
-                    document.getElementById('channelAccessToken').value = data.settings.channel_access_token?.value || '';
-                    document.getElementById('channelSecret').value = data.settings.channel_secret?.value || '';
-                    document.getElementById('botNameInput').value = data.settings.bot_name?.value || '';
-                    document.getElementById('botPictureUrl').value = data.settings.bot_picture_url?.value || '';
-                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
-                    
-                    document.getElementById('notificationEnabled').checked = data.settings.notification_enabled?.value === 'true';
-                    document.getElementById('notifyOnRequest').checked = data.settings.notify_on_request?.value === 'true';
-                    document.getElementById('notifyOnApprove').checked = data.settings.notify_on_approve?.value === 'true';
-                    document.getElementById('notifyOnReject').checked = data.settings.notify_on_reject?.value === 'true';
-                    document.getElementById('notifyOnReturn').checked = data.settings.notify_on_return?.value === 'true';
-                    document.getElementById('notifyDueReminder').checked = data.settings.notify_due_reminder?.value === 'true';
-                    document.getElementById('notifyOverdue').checked = data.settings.notify_overdue?.value === 'true';
-                    
-                    updateBotConnectionStatus(data.connectionStatus);
-                }
-                
-                loadNotificationHistory();
-                
-            } catch (error) {
-                showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
-            }
-        }
-
-        async function saveBotSettings() {
-            try {
-                const settings = {
-                    channel_access_token: {
-                        value: document.getElementById('channelAccessToken').value,
-                        description: 'Channel Access Token สำหรับ LINE Messaging API',
-                        isActive: true
-                    },
-                    channel_secret: {
-                        value: document.getElementById('channelSecret').value,
-                        description: 'Channel Secret สำหรับ LINE Messaging API',
-                        isActive: true
-                    },
-                    bot_name: {
-                        value: document.getElementById('botNameInput').value,
-                        description: 'ชื่อของบอทที่แสดงใน LINE',
-                        isActive: true
-                    },
-                    bot_picture_url: {
-                        value: document.getElementById('botPictureUrl').value,
-                        description: 'URL รูปภาพโปรไฟล์บอท',
-                        isActive: true
-                    },
-                    admin_notify_group: {
-                        value: document.getElementById('adminNotifyGroup').value,
-                        description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
-                        isActive: true
-                    },
-                    notification_enabled: {
-                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
-                        description: 'เปิดใช้งานการแจ้งเตือน',
-                        isActive: true
-                    },
-                    notify_on_request: {
-                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
-                        isActive: true
-                    },
-                    notify_on_approve: {
-                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
-                        isActive: true
-                    },
-                    notify_on_reject: {
-                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
-                        isActive: true
-                    },
-                    notify_on_return: {
-                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อมีการคืนของ',
-                        isActive: true
-                    },
-                    notify_due_reminder: {
-                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
-                        isActive: true
-                    },
-                    notify_overdue: {
-                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
-                        isActive: true
-                    }
-                };
-                
-                const result = await callAPI('updateBotSettings', {
-                    settings: JSON.stringify(settings)
-                });
-                
-                if (result.success) {
-                    showMessage('success', 'บันทึกสำเร็จ', 'บันทึกการตั้งค่า LINE Bot สำเร็จ!');
-                    loadBotSettings();
-                }
-                
-            } catch (error) {
-                showMessage('error', 'ไม่สามารถบันทึกได้', error.message);
-            }
-        }
-
-        async function testBotConnection() {
-            try {
-                showLoading();
-                
-                const result = await callAPI('testBotConnection');
-                
-                if (result.success) {
-                    const testResult = result.testResult;
-                    
-                    if (testResult.success) {
-                        showMessage('success', 'ทดสอบสำเร็จ', 
-                            `เชื่อมต่อกับ LINE Bot "${result.botName}" สำเร็จ!`);
-                        
-                        updateBotInfo(testResult.botInfo);
-                        
-                    } else {
-                        showMessage('error', 'ทดสอบล้มเหลว', result.message);
-                    }
-                }
-                
-                loadBotSettings();
-                
-            } catch (error) {
-                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        function updateBotConnectionStatus(status) {
-            const statusIndicator = document.getElementById('botStatusIndicator');
-            const statusText = document.getElementById('botStatusText');
-            const botInfoCard = document.getElementById('botInfoCard');
-            
-            if (!status) return;
-            
-            switch(status.status) {
-                case 'connected':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
-                    statusText.textContent = 'เชื่อมต่อแล้ว: ' + (status.botName || 'LINE Bot');
-                    botInfoCard.classList.remove('hidden');
-                    updateBotInfo(status);
-                    break;
-                    
-                case 'not_configured':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
-                    statusText.textContent = 'ยังไม่ได้ตั้งค่า';
-                    botInfoCard.classList.add('hidden');
-                    break;
-                    
-                case 'disabled':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-500';
-                    statusText.textContent = 'ปิดใช้งาน';
-                    botInfoCard.classList.add('hidden');
-                    break;
-                    
-                case 'connection_failed':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
-                    statusText.textContent = 'เชื่อมต่อล้มเหลว';
-                    botInfoCard.classList.remove('hidden');
-                    updateBotInfo(status);
-                    break;
-                    
-                default:
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-500';
-                    statusText.textContent = 'ไม่ทราบสถานะ';
-                    botInfoCard.classList.add('hidden');
-            }
-        }
-
-        function updateBotInfo(info) {
-            if (!info) return;
-            
-            const botPicture = document.getElementById('botPicture');
-            const botName = document.getElementById('botName');
-            const botStatusMessage = document.getElementById('botStatusMessage');
-            const botLastTested = document.getElementById('botLastTested');
-            
-            if (info.pictureUrl) {
-                botPicture.src = info.pictureUrl;
-            } else {
-                botPicture.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(info.botName || 'Bot') + '&background=00C300&color=fff';
-            }
-            
-            botName.textContent = info.botName || 'LINE Bot';
-            botStatusMessage.textContent = info.statusMessage || 'ระบบยืมคืนออนไลน์';
-            
-            if (info.lastTested) {
-                const lastTested = new Date(info.lastTested);
-                botLastTested.textContent = 'ทดสอบล่าสุด: ' + formatTime(lastTested);
-            } else {
-                botLastTested.textContent = 'ยังไม่เคยทดสอบ';
-            }
-        }
-
-        async function loadNotificationHistory() {
-            try {
-                const data = await callAPI('getNotificationHistory', {
-                    limit: 20
-                });
-                
-                if (data.success && data.notifications.length > 0) {
-                    const container = document.getElementById('notificationHistory');
-                    container.innerHTML = data.notifications.map(notif => `
-                        <div class="dark-card p-4 border-l-4 ${getNotificationBorderClass(notif.type)}">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <div class="flex items-center space-x-2 mb-1">
-                                        <i class="fas ${getNotificationIcon(notif.type)} ${getNotificationTextClass(notif.type)}"></i>
-                                        <span class="font-medium">${notif.title}</span>
-                                    </div>
-                                    <p class="text-sm text-gray-400">${notif.message}</p>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        ${formatTime(notif.createdAt)} • ${notif.recipient}
-                                    </p>
-                                </div>
-                                <span class="text-xs ${notif.status === 'sent' ? 'text-green-400' : 'text-red-400'}">
-                                    ${notif.status === 'sent' ? 'ส่งสำเร็จ' : 'ส่งล้มเหลว'}
-                                </span>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-                
-            } catch (error) {
-                console.error('Load notification history error:', error);
-            }
-        }
-
-        function refreshNotificationHistory() {
-            loadNotificationHistory();
-            showMessage('info', 'รีเฟรช', 'อัปเดตประวัติการแจ้งเตือนแล้ว');
-        }
-
-        function getNotificationIcon(type) {
-            const icons = {
-                'approve': 'fa-check-circle',
-                'reject': 'fa-times-circle',
-                'request': 'fa-bell',
-                'return': 'fa-undo',
-                'bot_settings': 'fa-cog',
-                'bot_test': 'fa-wifi',
-                'due_reminder': 'fa-clock',
-                'overdue': 'fa-exclamation-triangle'
-            };
-            return icons[type] || 'fa-bell';
-        }
-
-        function getNotificationBorderClass(type) {
-            const classes = {
-                'approve': 'border-green-500',
-                'reject': 'border-red-500',
-                'request': 'border-blue-500',
-                'return': 'border-yellow-500',
-                'bot_settings': 'border-purple-500',
-                'bot_test': 'border-indigo-500',
-                'due_reminder': 'border-orange-500',
-                'overdue': 'border-red-600'
-            };
-            return classes[type] || 'border-gray-500';
-        }
-
-        function getNotificationTextClass(type) {
-            const classes = {
-                'approve': 'text-green-400',
-                'reject': 'text-red-400',
-                'request': 'text-blue-400',
-                'return': 'text-yellow-400',
-                'bot_settings': 'text-purple-400',
-                'bot_test': 'text-indigo-400',
-                'due_reminder': 'text-orange-400',
-                'overdue': 'text-red-500'
-            };
-            return classes[type] || 'text-gray-400';
         }
 
         // =============================================
@@ -3417,68 +3155,6 @@
         }
 
         // =============================================
-        // Utility Functions
-        // =============================================
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            try {
-                const date = new Date(dateString);
-                const options = { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                };
-                return date.toLocaleDateString('th-TH', options);
-            } catch (e) {
-                return dateString;
-            }
-        }
-
-        function formatTime(dateString) {
-            if (!dateString) return '-';
-            try {
-                const date = new Date(dateString);
-                const now = new Date();
-                const diffMs = now - date;
-                const diffSec = Math.floor(diffMs / 1000);
-                const diffMin = Math.floor(diffSec / 60);
-                const diffHour = Math.floor(diffMin / 60);
-                const diffDay = Math.floor(diffHour / 24);
-                
-                if (diffDay > 0) return `${diffDay} วันที่แล้ว`;
-                if (diffHour > 0) return `${diffHour} ชั่วโมงที่แล้ว`;
-                if (diffMin > 0) return `${diffMin} นาทีที่แล้ว`;
-                return 'เมื่อสักครู่';
-            } catch (e) {
-                return dateString;
-            }
-        }
-
-        function getCategoryName(category) {
-            const categories = {
-                'book': 'หนังสือ',
-                'electronic': 'อุปกรณ์อิเล็กทรอนิกส์',
-                'tool': 'เครื่องมือ',
-                'sport': 'กีฬา',
-                'other': 'อื่นๆ'
-            };
-            return categories[category] || category;
-        }
-
-        function updateNotificationCount() {
-            const count = notifications.length;
-            const badge = document.getElementById('notificationCount');
-            if (count > 0) {
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        // =============================================
         // Initialize App
         // =============================================
         async function initializeApp() {
@@ -3522,9 +3198,6 @@
             }
         }
 
-        // Start the app when page loads
-        document.addEventListener('DOMContentLoaded', initializeApp);
-
         // Close notifications when clicking outside
         document.addEventListener('click', (event) => {
             const notificationContainer = document.getElementById('notificationContainer');
@@ -3534,6 +3207,9 @@
                 notificationDropdown.classList.add('hidden');
             }
         });
+
+        // Start the app when page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 
     <!-- LIFF SDK -->
