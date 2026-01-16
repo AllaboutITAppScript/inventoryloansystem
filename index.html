@@ -521,7 +521,7 @@
     <!-- Add Item Modal -->
     <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4">เพิ่มสิ่งของใหม่</h3>
+            <h3 class="text-xl font-bold mb-4" id="itemModalTitle">เพิ่มสิ่งของใหม่</h3>
             
             <div class="space-y-4">
                 <div>
@@ -560,11 +560,15 @@
                     <label class="block text-sm font-medium mb-2">URL รูปภาพ (ไม่จำเป็น)</label>
                     <input type="text" id="itemImageInput" class="w-full p-2 bg-gray-700 rounded" placeholder="https://example.com/image.jpg">
                 </div>
+
+                <!-- Hidden fields for editing -->
+                <input type="hidden" id="itemIdInput" value="">
+                <input type="hidden" id="itemModeInput" value="add">
             </div>
             
             <div class="flex justify-end space-x-3 mt-6">
-                <button onclick="closeAddItemModal()" class="btn-danger">ยกเลิก</button>
-                <button onclick="addNewItem()" class="btn-success">บันทึก</button>
+                <button onclick="closeItemModal()" class="btn-danger">ยกเลิก</button>
+                <button onclick="saveItem()" class="btn-success" id="saveItemBtn">บันทึก</button>
             </div>
         </div>
     </div>
@@ -694,17 +698,41 @@
         }
 
         function openAddItemModal() {
-            document.getElementById('addItemModal').classList.remove('hidden');
-        }
-
-        function closeAddItemModal() {
-            document.getElementById('addItemModal').classList.add('hidden');
+            document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
+            document.getElementById('saveItemBtn').textContent = 'บันทึก';
+            document.getElementById('itemModeInput').value = 'add';
+            
             // Clear inputs
+            document.getElementById('itemIdInput').value = '';
             document.getElementById('itemNameInput').value = '';
             document.getElementById('itemDescInput').value = '';
+            document.getElementById('itemCategoryInput').value = 'book';
             document.getElementById('itemQuantityInput').value = '1';
             document.getElementById('itemLocationInput').value = '';
             document.getElementById('itemImageInput').value = '';
+            
+            document.getElementById('addItemModal').classList.remove('hidden');
+        }
+
+        function openEditItemModal(item) {
+            document.getElementById('itemModalTitle').textContent = 'แก้ไขสิ่งของ';
+            document.getElementById('saveItemBtn').textContent = 'อัปเดต';
+            document.getElementById('itemModeInput').value = 'edit';
+            
+            // Fill inputs with item data
+            document.getElementById('itemIdInput').value = item.itemId;
+            document.getElementById('itemNameInput').value = item.itemName;
+            document.getElementById('itemDescInput').value = item.description || '';
+            document.getElementById('itemCategoryInput').value = item.category || 'book';
+            document.getElementById('itemQuantityInput').value = item.quantity || 1;
+            document.getElementById('itemLocationInput').value = item.location || '';
+            document.getElementById('itemImageInput').value = item.imageUrl || '';
+            
+            document.getElementById('addItemModal').classList.remove('hidden');
+        }
+
+        function closeItemModal() {
+            document.getElementById('addItemModal').classList.add('hidden');
         }
 
         // =============================================
@@ -1433,8 +1461,41 @@
             `).join('');
         }
 
-        async function addNewItem() {
+        async function editItem(itemId) {
             try {
+                // Find item in current items
+                const item = currentItems.find(i => i.itemId === itemId);
+                if (!item) {
+                    // If not found in current items, load from server
+                    showLoading();
+                    const data = await callAPI('getItems', {
+                        search: itemId,
+                        category: 'all'
+                    });
+                    hideLoading();
+                    
+                    if (data.items && data.items.length > 0) {
+                        const foundItem = data.items.find(i => i.itemId === itemId);
+                        if (foundItem) {
+                            openEditItemModal(foundItem);
+                        } else {
+                            showMessage('error', 'ไม่พบสิ่งของ', 'ไม่พบสิ่งของที่ต้องการแก้ไข');
+                        }
+                    } else {
+                        showMessage('error', 'ไม่พบสิ่งของ', 'ไม่พบสิ่งของที่ต้องการแก้ไข');
+                    }
+                } else {
+                    openEditItemModal(item);
+                }
+            } catch (error) {
+                console.error('Error editing item:', error);
+                showMessage('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถเปิดหน้าแก้ไขได้');
+            }
+        }
+
+        async function saveItem() {
+            try {
+                const mode = document.getElementById('itemModeInput').value;
                 const itemData = {
                     itemName: document.getElementById('itemNameInput').value.trim(),
                     description: document.getElementById('itemDescInput').value.trim(),
@@ -1454,26 +1515,47 @@
                     return;
                 }
                 
-                const result = await callAPI('addItem', itemData);
+                let result;
+                if (mode === 'add') {
+                    // Add new item
+                    result = await callAPI('addItem', itemData);
+                } else {
+                    // Update existing item
+                    const itemId = document.getElementById('itemIdInput').value;
+                    if (!itemId) {
+                        showMessage('error', 'ไม่พบรหัสสิ่งของ');
+                        return;
+                    }
+                    
+                    result = await callAPI('updateItem', {
+                        itemId: itemId,
+                        ...itemData
+                    });
+                }
                 
                 if (result.success) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'เพิ่มสิ่งของสำเร็จ!',
-                        text: `เพิ่ม ${itemData.itemName} เรียบร้อยแล้ว`,
+                        title: mode === 'add' ? 'เพิ่มสิ่งของสำเร็จ!' : 'อัปเดตสิ่งของสำเร็จ!',
+                        text: result.message || `ดำเนินการ ${mode === 'add' ? 'เพิ่ม' : 'อัปเดต'} ${itemData.itemName} เรียบร้อยแล้ว`,
                         timer: 3000,
                         showConfirmButton: false
                     });
                     
-                    closeAddItemModal();
+                    closeItemModal();
                     loadItemsForManagement();
                     loadDashboardData();
+                    
+                    // Also refresh items in browse section if it's open
+                    if (!document.getElementById('browseItems').classList.contains('hidden')) {
+                        loadItems();
+                    }
                 }
                 
             } catch (error) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'ไม่สามารถเพิ่มได้',
+                    title: 'ไม่สามารถบันทึกได้',
                     text: error.message
                 });
             }
