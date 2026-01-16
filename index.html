@@ -8,266 +8,308 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts Kanit -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- LIFF SDK -->
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             font-family: 'Kanit', sans-serif;
         }
-        .dark-mode {
+        body {
             background-color: #1a202c;
             color: #e2e8f0;
         }
-        .sidebar {
-            transition: all 0.3s ease;
+        .card {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        .section {
-            animation: fadeIn 0.3s ease-in-out;
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .btn-primary:hover {
+            background-color: #2563eb;
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                position: fixed;
-                z-index: 50;
-                height: 100vh;
-            }
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            .sidebar-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 40;
-            }
-            .sidebar.active + .sidebar-overlay {
-                display: block;
-            }
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-success:hover {
+            background-color: #059669;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
         }
         .status-borrowed {
             background-color: #f59e0b;
             color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
         .status-returned {
             background-color: #10b981;
             color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
         .status-overdue {
             background-color: #ef4444;
             color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .message {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            z-index: 1000;
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+        .message.success {
+            background-color: #10b981;
+            color: white;
+        }
+        .message.error {
+            background-color: #ef4444;
+            color: white;
+        }
+        .message.info {
+            background-color: #3b82f6;
+            color: white;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
-<body class="dark-mode min-h-screen">
+<body class="min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center sticky top-0 z-40">
-        <div class="flex items-center space-x-4">
-            <button id="menuToggle" class="lg:hidden">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-            <h1 class="text-xl font-bold">ระบบยืมคืนออนไลน์</h1>
-        </div>
-        <div class="flex items-center space-x-4">
-            <div id="userProfile" class="hidden flex items-center space-x-2">
-                <img id="userPicture" class="w-8 h-8 rounded-full border-2 border-blue-500" src="" alt="Profile" onerror="this.src='https://ui-avatars.com/api/?name=User&background=1E40AF&color=fff'">
-                <div class="flex flex-col">
-                    <span id="userName" class="text-sm font-medium"></span>
-                    <span id="userRole" class="text-xs px-2 py-0.5 bg-blue-600 rounded-full inline-block mt-0.5"></span>
+    <nav class="bg-gray-800 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-xl font-bold">
+                    <i class="fas fa-box-open mr-2"></i>ระบบยืมคืนออนไลน์
+                </h1>
+            </div>
+            <div class="flex items-center space-x-4" id="authButtons">
+                <button onclick="loginWithLINE()" class="btn-success">
+                    <i class="fab fa-line mr-2"></i>ล็อกอินด้วย LINE
+                </button>
+            </div>
+            <div class="hidden" id="userInfo">
+                <div class="flex items-center space-x-3">
+                    <img id="userAvatar" class="w-8 h-8 rounded-full" src="" alt="Profile">
+                    <div>
+                        <div id="userName" class="text-sm font-medium"></div>
+                        <div id="userRole" class="text-xs text-gray-300"></div>
+                    </div>
+                    <button onclick="logout()" class="btn-danger text-sm">
+                        <i class="fas fa-sign-out-alt mr-1"></i>ออก
+                    </button>
                 </div>
             </div>
-            <button id="logoutBtn" class="hidden px-4 py-2 bg-red-600 rounded hover:bg-red-700 transition">
-                <i class="fas fa-sign-out-alt mr-2"></i>ออกจากระบบ
-            </button>
-            <button id="loginBtn" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700 transition">
-                <i class="fab fa-line mr-2"></i>ล็อกอินด้วย LINE
-            </button>
         </div>
     </nav>
 
-    <!-- Main Layout -->
-    <div class="flex relative">
-        <!-- Sidebar Overlay (Mobile) -->
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
-        
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar bg-gray-900 text-white w-64 min-h-screen p-4 lg:block">
-            <div class="space-y-2 mt-4">
-                <button onclick="showSection('dashboard')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                    <i class="fas fa-tachometer-alt w-5 h-5"></i>
-                    <span>แดชบอร์ด</span>
+    <!-- Main Content -->
+    <div class="container mx-auto p-4">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="text-center py-12">
+            <div class="max-w-md mx-auto card">
+                <i class="fas fa-box-open text-5xl text-blue-500 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-4">ระบบยืมคืนออนไลน์</h2>
+                <p class="text-gray-400 mb-6">ระบบจัดการการยืม-คืนสิ่งของด้วย LINE Login</p>
+                <button onclick="loginWithLINE()" class="btn-success w-full py-3 text-lg">
+                    <i class="fab fa-line mr-2"></i>ล็อกอินด้วย LINE
                 </button>
-                
-                <button onclick="showSection('browseItems')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                    <i class="fas fa-boxes w-5 h-5"></i>
-                    <span>รายการสิ่งของ</span>
-                </button>
-                
-                <button onclick="showSection('myBorrowings')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                    <i class="fas fa-history w-5 h-5"></i>
-                    <span>รายการยืมของฉัน</span>
-                </button>
-                
-                <!-- Admin Only Sections -->
-                <div id="adminSections" class="hidden">
-                    <div class="px-4 py-2 text-sm text-gray-400 border-t border-gray-700 mt-4">
-                        สำหรับผู้ดูแลระบบ
-                    </div>
-                    
-                    <button onclick="showSection('manageItems')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                        <i class="fas fa-tools w-5 h-5"></i>
-                        <span>จัดการสิ่งของ</span>
-                    </button>
-                    
-                    <button onclick="showSection('manageBorrowings')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                        <i class="fas fa-clipboard-list w-5 h-5"></i>
-                        <span>จัดการการยืมคืน</span>
-                    </button>
-                    
-                    <button onclick="showSection('manageUsers')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                        <i class="fas fa-users-cog w-5 h-5"></i>
-                        <span>จัดการผู้ใช้งาน</span>
-                    </button>
-                    
-                    <button onclick="showSection('systemSettings')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3 transition">
-                        <i class="fas fa-cogs w-5 h-5"></i>
-                        <span>ตั้งค่าระบบ</span>
-                    </button>
+                <div class="mt-6 text-sm text-gray-400">
+                    <p><i class="fas fa-info-circle mr-2"></i>ต้องใช้งานผ่าน LINE เท่านั้น</p>
                 </div>
             </div>
-            
-            <!-- System Status -->
-            <div class="mt-8 p-4 bg-gray-800 rounded-lg">
-                <h3 class="text-sm font-semibold text-gray-300 mb-2">สถานะระบบ</h3>
-                <div class="space-y-1">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-400">กำลังทำงาน</span>
-                        <span class="text-green-400"><i class="fas fa-circle text-xs"></i> ปกติ</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-400">อัปเดตล่าสุด</span>
-                        <span class="text-gray-400" id="lastUpdate">-</span>
-                    </div>
-                </div>
-            </div>
-        </aside>
+        </div>
 
-        <!-- Main Content -->
-        <main class="flex-1 p-4 lg:p-6">
-            <!-- Dashboard Section -->
-            <section id="dashboard" class="section hidden">
+        <!-- Main App (Hidden by default) -->
+        <div id="appScreen" class="hidden">
+            <!-- Dashboard -->
+            <div id="dashboard">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">แดชบอร์ด</h2>
-                    <button onclick="loadDashboardData()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 transition">
-                        <i class="fas fa-sync-alt mr-2"></i>รีเฟรช
-                    </button>
+                    <h2 class="text-2xl font-bold">
+                        <i class="fas fa-tachometer-alt mr-2"></i>แดชบอร์ด
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button onclick="showSection('browseItems')" class="btn-primary">
+                            <i class="fas fa-boxes mr-2"></i>ยืมสิ่งของ
+                        </button>
+                        <button onclick="showSection('myBorrowings')" class="btn-primary">
+                            <i class="fas fa-history mr-2"></i>รายการยืมของฉัน
+                        </button>
+                    </div>
                 </div>
-                
-                <!-- Stats Cards -->
+
+                <!-- Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-blue-500">
-                        <div class="flex justify-between items-start">
+                    <div class="card">
+                        <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-300">สิ่งของทั้งหมด</h3>
-                                <p id="totalItems" class="text-3xl font-bold mt-2">0</p>
+                                <p class="text-gray-400">สิ่งของทั้งหมด</p>
+                                <p id="totalItems" class="text-3xl font-bold">5</p>
                             </div>
-                            <i class="fas fa-box text-blue-400 text-2xl"></i>
-                        </div>
-                        <div class="mt-4 text-sm text-gray-400">
-                            <span id="totalAvailable">0</span> ว่าง | <span id="totalBorrowed">0</span> ถูกยืม
+                            <i class="fas fa-box text-blue-500 text-2xl"></i>
                         </div>
                     </div>
-                    
-                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-green-500">
-                        <div class="flex justify-between items-start">
+                    <div class="card">
+                        <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-300">ยืมคืนวันนี้</h3>
-                                <p id="todayBorrowings" class="text-3xl font-bold mt-2">0</p>
+                                <p class="text-gray-400">ว่างสำหรับยืม</p>
+                                <p id="availableItems" class="text-3xl font-bold">28</p>
                             </div>
-                            <i class="fas fa-calendar-day text-green-400 text-2xl"></i>
-                        </div>
-                        <div class="mt-4 text-sm text-gray-400">
-                            จำนวนการยืมคืนวันนี้
+                            <i class="fas fa-check-circle text-green-500 text-2xl"></i>
                         </div>
                     </div>
-                    
-                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-red-500">
-                        <div class="flex justify-between items-start">
+                    <div class="card">
+                        <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-300">ค้างคืน</h3>
-                                <p id="overdueItems" class="text-3xl font-bold mt-2">0</p>
+                                <p class="text-gray-400">ถูกยืมไปแล้ว</p>
+                                <p id="borrowedItems" class="text-3xl font-bold">0</p>
                             </div>
-                            <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
-                        </div>
-                        <div class="mt-4 text-sm text-gray-400">
-                            รายการที่เกินกำหนดคืน
+                            <i class="fas fa-cart-arrow-down text-yellow-500 text-2xl"></i>
                         </div>
                     </div>
-                    
-                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-purple-500">
-                        <div class="flex justify-between items-start">
+                    <div class="card">
+                        <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-300">ผู้ใช้งาน</h3>
-                                <p id="totalUsers" class="text-3xl font-bold mt-2">0</p>
+                                <p class="text-gray-400">ค้างคืน</p>
+                                <p id="overdueItems" class="text-3xl font-bold">0</p>
                             </div>
-                            <i class="fas fa-users text-purple-400 text-2xl"></i>
-                        </div>
-                        <div class="mt-4 text-sm text-gray-400">
-                            ผู้ใช้งานทั้งหมดในระบบ
+                            <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Charts and Tables -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <!-- Popular Items -->
-                    <div class="bg-gray-800 p-6 rounded-lg shadow">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold">สิ่งของยอดนิยม</h3>
-                            <span class="text-sm text-gray-400">5 อันดับแรก</span>
-                        </div>
-                        <div id="popularItems" class="space-y-3">
-                            <div class="text-center py-8 text-gray-500">
-                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                <p>กำลังโหลดข้อมูล...</p>
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">
+                            <i class="fas fa-fire mr-2"></i>สิ่งของยอดนิยม
+                        </h3>
+                        <div id="popularItems">
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+                                    <span>หนังสือ Python</span>
+                                    <span class="text-blue-400 font-bold">5 ครั้ง</span>
+                                </div>
+                                <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+                                    <span>เมาส์ไร้สาย</span>
+                                    <span class="text-blue-400 font-bold">3 ครั้ง</span>
+                                </div>
+                                <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+                                    <span>Projector</span>
+                                    <span class="text-blue-400 font-bold">2 ครั้ง</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Recent Activities -->
-                    <div class="bg-gray-800 p-6 rounded-lg shadow">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold">กิจกรรมล่าสุด</h3>
-                            <span class="text-sm text-gray-400">6 กิจกรรมล่าสุด</span>
-                        </div>
-                        <div id="recentActivities" class="space-y-3">
-                            <div class="text-center py-8 text-gray-500">
-                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                <p>กำลังโหลดข้อมูล...</p>
+
+                    <!-- Quick Borrow -->
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">
+                            <i class="fas fa-bolt mr-2"></i>ยืมสิ่งของเร็วๆ
+                        </h3>
+                        <div id="quickBorrow">
+                            <div class="space-y-3">
+                                <button onclick="quickBorrow('ITM001')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
+                                    <div class="flex justify-between items-center">
+                                        <span>หนังสือ Python</span>
+                                        <span class="text-green-400">ว่าง 10 ชิ้น</span>
+                                    </div>
+                                </button>
+                                <button onclick="quickBorrow('ITM002')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
+                                    <div class="flex justify-between items-center">
+                                        <span>เมาส์ไร้สาย</span>
+                                        <span class="text-green-400">ว่าง 5 ชิ้น</span>
+                                    </div>
+                                </button>
+                                <button onclick="quickBorrow('ITM004')" class="w-full p-3 bg-gray-700 rounded hover:bg-gray-600 text-left">
+                                    <div class="flex justify-between items-center">
+                                        <span>Projector</span>
+                                        <span class="text-green-400">ว่าง 2 ชิ้น</span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
             <!-- Browse Items Section -->
-            <section id="browseItems" class="section hidden">
+            <div id="browseItems" class="hidden">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">รายการสิ่งของ</h2>
-                    <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
-                        <div class="relative">
-                            <select id="categoryFilter" class="bg-gray-700 text-white pl-10 pr-4 py-2 rounded w-full md:w-auto">
+                    <h2 class="text-2xl font-bold">
+                        <i class="fas fa-boxes mr-2"></i>รายการสิ่งของ
+                    </h2>
+                    <button onclick="showSection('dashboard')" class="btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>กลับหน้าแรก
+                    </button>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="card mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">ค้นหา</label>
+                            <input type="text" id="searchBox" placeholder="ชื่อสิ่งของหรือรายละเอียด..." 
+                                   class="w-full p-2 bg-gray-700 rounded" oninput="searchItems()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">หมวดหมู่</label>
+                            <select id="categoryFilter" class="w-full p-2 bg-gray-700 rounded" onchange="filterItems()">
                                 <option value="all">ทั้งหมด</option>
                                 <option value="book">หนังสือ</option>
                                 <option value="electronic">อุปกรณ์อิเล็กทรอนิกส์</option>
@@ -275,399 +317,176 @@
                                 <option value="sport">กีฬา</option>
                                 <option value="other">อื่นๆ</option>
                             </select>
-                            <i class="fas fa-filter absolute left-3 top-3 text-gray-400"></i>
                         </div>
-                        <div class="relative">
-                            <input type="text" id="searchInput" placeholder="ค้นหาสิ่งของ..." class="bg-gray-700 text-white pl-10 pr-4 py-2 rounded w-full md:w-64">
-                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">สถานะ</label>
+                            <select id="statusFilter" class="w-full p-2 bg-gray-700 rounded" onchange="filterItems()">
+                                <option value="all">ทั้งหมด</option>
+                                <option value="available">ว่างสำหรับยืม</option>
+                                <option value="unavailable">ไม่ว่าง</option>
+                            </select>
                         </div>
                     </div>
                 </div>
-                
-                <div id="itemsLoading" class="text-center py-12">
-                    <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-4"></i>
-                    <p class="text-gray-400">กำลังโหลดรายการสิ่งของ...</p>
+
+                <!-- Items Grid -->
+                <div id="itemsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Items will be loaded here -->
                 </div>
-                
-                <div id="itemsContainer" class="hidden">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="itemsGrid">
-                        <!-- Items will be loaded here -->
-                    </div>
-                    
-                    <div id="noItems" class="hidden text-center py-12">
-                        <i class="fas fa-box-open text-4xl text-gray-500 mb-4"></i>
-                        <h3 class="text-xl font-bold text-gray-400 mb-2">ไม่พบสิ่งของ</h3>
-                        <p class="text-gray-500">ไม่มีสิ่งของที่ตรงกับการค้นหาในขณะนี้</p>
-                    </div>
+
+                <!-- Loading State -->
+                <div id="itemsLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>กำลังโหลดรายการสิ่งของ...</p>
                 </div>
-            </section>
+
+                <!-- Empty State -->
+                <div id="noItems" class="hidden text-center py-12">
+                    <i class="fas fa-box-open text-4xl text-gray-500 mb-4"></i>
+                    <h3 class="text-xl font-bold text-gray-400 mb-2">ไม่พบสิ่งของ</h3>
+                    <p class="text-gray-500">ไม่มีสิ่งของที่ตรงกับการค้นหาในขณะนี้</p>
+                </div>
+            </div>
 
             <!-- My Borrowings Section -->
-            <section id="myBorrowings" class="section hidden">
-                <h2 class="text-2xl font-bold mb-6">รายการยืมของฉัน</h2>
-                
-                <div id="borrowingsLoading" class="text-center py-12">
-                    <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-4"></i>
-                    <p class="text-gray-400">กำลังโหลดรายการยืม...</p>
-                </div>
-                
-                <div id="borrowingsContainer" class="hidden">
-                    <div class="mb-4 flex justify-between items-center">
-                        <div class="text-sm text-gray-400">
-                            แสดง <span id="borrowingsCount">0</span> รายการ
-                        </div>
-                        <div class="flex space-x-2">
-                            <select id="borrowingsFilter" class="bg-gray-700 text-white px-4 py-2 rounded">
-                                <option value="all">ทั้งหมด</option>
-                                <option value="borrowed">กำลังยืม</option>
-                                <option value="returned">คืนแล้ว</option>
-                                <option value="overdue">ค้างคืน</option>
-                            </select>
-                            <button onclick="loadMyBorrowings()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
+            <div id="myBorrowings" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">
+                        <i class="fas fa-history mr-2"></i>รายการยืมของฉัน
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button onclick="showSection('dashboard')" class="btn-primary">
+                            <i class="fas fa-arrow-left mr-2"></i>กลับหน้าแรก
+                        </button>
+                        <button onclick="loadMyBorrowings()" class="btn-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>รีเฟรช
+                        </button>
                     </div>
-                    
-                    <div class="overflow-x-auto rounded-lg border border-gray-700">
-                        <table class="min-w-full bg-gray-800">
-                            <thead class="bg-gray-700">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-sm font-medium">สิ่งของ</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium">วันที่ยืม</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium">กำหนดคืน</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium">สถานะ</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium">การดำเนินการ</th>
+                </div>
+
+                <!-- Borrowings Table -->
+                <div class="card">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="py-3 px-4 text-left">สิ่งของ</th>
+                                    <th class="py-3 px-4 text-left">วันที่ยืม</th>
+                                    <th class="py-3 px-4 text-left">กำหนดคืน</th>
+                                    <th class="py-3 px-4 text-left">สถานะ</th>
+                                    <th class="py-3 px-4 text-left">การดำเนินการ</th>
                                 </tr>
                             </thead>
-                            <tbody id="myBorrowingsTable" class="divide-y divide-gray-700">
+                            <tbody id="borrowingsTable">
                                 <!-- Data will be loaded here -->
                             </tbody>
                         </table>
                     </div>
-                    
+
+                    <!-- Loading State -->
+                    <div id="borrowingsLoading" class="loading">
+                        <div class="spinner"></div>
+                        <p>กำลังโหลดรายการยืม...</p>
+                    </div>
+
+                    <!-- Empty State -->
                     <div id="noBorrowings" class="hidden text-center py-12">
                         <i class="fas fa-history text-4xl text-gray-500 mb-4"></i>
                         <h3 class="text-xl font-bold text-gray-400 mb-2">ไม่พบรายการยืม</h3>
                         <p class="text-gray-500">คุณยังไม่มีรายการยืมในระบบ</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Manage Items Section (Admin Only) -->
-            <section id="manageItems" class="section hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">จัดการสิ่งของ</h2>
-                    <button onclick="showAddItemModal()" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">
-                        <i class="fas fa-plus mr-2"></i>เพิ่มสิ่งของใหม่
-                    </button>
-                </div>
-                
-                <div class="bg-gray-800 rounded-lg p-4 mb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="text" id="adminSearchItems" placeholder="ค้นหาสิ่งของ..." class="bg-gray-700 text-white px-4 py-2 rounded">
-                        <select id="adminCategoryFilter" class="bg-gray-700 text-white px-4 py-2 rounded">
-                            <option value="all">ทุกหมวดหมู่</option>
-                            <option value="book">หนังสือ</option>
-                            <option value="electronic">อุปกรณ์อิเล็กทรอนิกส์</option>
-                            <option value="tool">เครื่องมือ</option>
-                        </select>
-                        <button onclick="loadAdminItems()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">
-                            <i class="fas fa-search mr-2"></i>ค้นหา
+                        <button onclick="showSection('browseItems')" class="btn-primary mt-4">
+                            <i class="fas fa-boxes mr-2"></i>ไปยืมสิ่งของ
                         </button>
                     </div>
                 </div>
-                
-                <div id="adminItemsContainer">
-                    <div class="text-center py-12">
-                        <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-4"></i>
-                        <p class="text-gray-400">กำลังโหลดข้อมูลสิ่งของ...</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Add/Edit Item Modal -->
-            <div id="itemModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-                <div class="bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 id="modalTitle" class="text-xl font-bold">เพิ่มสิ่งของใหม่</h3>
-                            <button onclick="closeItemModal()" class="text-gray-400 hover:text-white">
-                                <i class="fas fa-times text-2xl"></i>
-                            </button>
-                        </div>
-                        
-                        <form id="itemForm" onsubmit="saveItem(event)">
-                            <input type="hidden" id="editItemId">
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">ชื่อสิ่งของ *</label>
-                                    <input type="text" id="itemName" required class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">หมวดหมู่ *</label>
-                                    <select id="itemCategory" required class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                        <option value="">เลือกหมวดหมู่</option>
-                                        <option value="book">หนังสือ</option>
-                                        <option value="electronic">อุปกรณ์อิเล็กทรอนิกส์</option>
-                                        <option value="tool">เครื่องมือ</option>
-                                        <option value="sport">กีฬา</option>
-                                        <option value="other">อื่นๆ</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium mb-2">คำอธิบาย</label>
-                                <textarea id="itemDescription" rows="3" class="w-full bg-gray-700 text-white px-4 py-2 rounded"></textarea>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">จำนวน *</label>
-                                    <input type="number" id="itemQuantity" min="1" required class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">จำนวนที่ว่าง *</label>
-                                    <input type="number" id="itemAvailable" min="0" required class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">สถานที่เก็บ</label>
-                                    <input type="text" id="itemLocation" class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">URL รูปภาพ</label>
-                                    <input type="url" id="itemImageUrl" class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">บาร์โค้ด/รหัส</label>
-                                    <input type="text" id="itemBarcode" class="w-full bg-gray-700 text-white px-4 py-2 rounded">
-                                </div>
-                            </div>
-                            
-                            <div class="flex justify-end space-x-4">
-                                <button type="button" onclick="closeItemModal()" class="px-6 py-2 bg-gray-700 rounded hover:bg-gray-600">
-                                    ยกเลิก
-                                </button>
-                                <button type="submit" class="px-6 py-2 bg-blue-600 rounded hover:bg-blue-700">
-                                    บันทึก
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Loading Spinner -->
-            <div id="loadingSpinner" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-                <div class="text-center">
-                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 mx-auto"></div>
-                    <p class="mt-4 text-lg">กำลังประมวลผล...</p>
-                </div>
-            </div>
-        </main>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="spinner mb-4"></div>
+            <p class="text-lg">กำลังประมวลผล...</p>
+        </div>
     </div>
 
     <script>
         // =============================================
-        // Global Variables
+        // Configuration
+        // =============================================
+        const CONFIG = {
+            LIFF_ID: '2008904120-hDgwl23w',
+            API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400'
+        };
+
+        // =============================================
+        // State Management
         // =============================================
         let currentUser = null;
-        let liffId = '2008904120-hDgwl23w'; // LIFF ID ของคุณ
-        const apiUrl = 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec'; // Web App URL
-
-        // =============================================
-        // LIFF Initialization with Auto-Login
-        // =============================================
-        async function initializeLiff() {
-            try {
-                // Initialize LIFF
-                await liff.init({ liffId: liffId });
-                
-                // Check if user is already logged in
-                if (liff.isLoggedIn()) {
-                    // Auto login with user profile
-                    await autoLogin();
-                } else {
-                    // Show login button
-                    document.getElementById('loginBtn').classList.remove('hidden');
-                }
-                
-                // Update last update time
-                document.getElementById('lastUpdate').textContent = 
-                    new Date().toLocaleTimeString('th-TH');
-                
-            } catch (error) {
-                console.error('LIFF Initialization Error:', error);
-                showMessage('error', 'ไม่สามารถเชื่อมต่อกับ LINE ได้');
-                document.getElementById('loginBtn').classList.remove('hidden');
-            }
-        }
-
-        async function autoLogin() {
-            try {
-                showLoading();
-                
-                // Get user profile from LINE
-                const profile = await liff.getProfile();
-                
-                // Send login request to backend
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        action: 'login',
-                        uid: profile.userId,
-                        lineId: profile.userId,
-                        displayName: profile.displayName,
-                        pictureUrl: profile.pictureUrl || '',
-                        email: liff.getDecodedIDToken()?.email || ''
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentUser = data.user;
-                    updateUIAfterLogin();
-                    showSection('dashboard');
-                    loadDashboardData();
-                    showMessage('success', 'ยินดีต้อนรับ, ' + data.user.displayName);
-                } else {
-                    showMessage('error', 'การล็อกอินล้มเหลว: ' + (data.error || 'Unknown error'));
-                    document.getElementById('loginBtn').classList.remove('hidden');
-                }
-                
-                hideLoading();
-                
-            } catch (error) {
-                console.error('Auto Login Error:', error);
-                hideLoading();
-                showMessage('error', 'เกิดข้อผิดพลาดในการล็อกอินอัตโนมัติ');
-                document.getElementById('loginBtn').classList.remove('hidden');
-            }
-        }
-
-        async function manualLogin() {
-            try {
-                showLoading();
-                
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
-                
-                await autoLogin();
-                
-            } catch (error) {
-                console.error('Manual Login Error:', error);
-                hideLoading();
-                showMessage('error', 'ไม่สามารถล็อกอินได้');
-            }
-        }
+        let currentItems = [];
+        let currentBorrowings = [];
 
         // =============================================
         // UI Functions
         // =============================================
-        function updateUIAfterLogin() {
-            // Update user profile display
-            document.getElementById('loginBtn').classList.add('hidden');
-            document.getElementById('logoutBtn').classList.remove('hidden');
-            document.getElementById('userProfile').classList.remove('hidden');
+        function showMessage(type, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
+                    <span>${text}</span>
+                </div>
+            `;
             
-            // Set user information
-            document.getElementById('userPicture').src = currentUser.pictureUrl || 
-                'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.displayName) + '&background=1E40AF&color=fff';
-            document.getElementById('userName').textContent = currentUser.displayName;
-            document.getElementById('userRole').textContent = 
-                currentUser.role === 'admin' || currentUser.role === 'superadmin' ? 
-                'ผู้ดูแลระบบ' : 'ผู้ใช้งาน';
+            document.body.appendChild(messageDiv);
             
-            // Show admin sections if user is admin
-            if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
-                document.getElementById('adminSections').classList.remove('hidden');
-            }
-            
-            // Update sidebar active state
-            document.querySelectorAll('.sidebar-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600');
-            });
-            document.querySelector(`[onclick="showSection('dashboard')"]`).classList.add('bg-blue-600');
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 3000);
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
         }
 
         function showSection(sectionId) {
             // Hide all sections
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.add('hidden');
-            });
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('browseItems').classList.add('hidden');
+            document.getElementById('myBorrowings').classList.add('hidden');
             
             // Show selected section
             document.getElementById(sectionId).classList.remove('hidden');
             
-            // Update active sidebar button
-            document.querySelectorAll('.sidebar-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600');
-            });
-            
-            // Close mobile menu
-            document.getElementById('sidebar').classList.remove('active');
-            document.getElementById('sidebarOverlay').classList.remove('active');
-            
-            // Load data for the section
-            switch(sectionId) {
-                case 'dashboard':
-                    loadDashboardData();
-                    break;
-                case 'browseItems':
-                    loadItems();
-                    break;
-                case 'myBorrowings':
-                    loadMyBorrowings();
-                    break;
-                case 'manageItems':
-                    loadAdminItems();
-                    break;
+            // Load data if needed
+            if (sectionId === 'browseItems') {
+                loadItems();
+            } else if (sectionId === 'myBorrowings') {
+                loadMyBorrowings();
             }
         }
 
-        function showLoading() {
-            document.getElementById('loadingSpinner').classList.remove('hidden');
-        }
-
-        function hideLoading() {
-            document.getElementById('loadingSpinner').classList.add('hidden');
-        }
-
-        function showMessage(type, message) {
-            // Remove existing messages
-            document.querySelectorAll('.message-alert').forEach(el => el.remove());
+        function updateUserUI(user) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            document.getElementById('authButtons').classList.add('hidden');
+            document.getElementById('userInfo').classList.remove('hidden');
             
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `message-alert fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3 ${
-                type === 'success' ? 'bg-green-600' : 
-                type === 'error' ? 'bg-red-600' : 'bg-blue-600'
-            } text-white animate-fade-in`;
+            document.getElementById('userName').textContent = user.displayName;
+            document.getElementById('userRole').textContent = user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน';
+            document.getElementById('userAvatar').src = user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`;
             
-            const icon = type === 'success' ? 'check-circle' : 
-                        type === 'error' ? 'exclamation-circle' : 'info-circle';
-            
-            alertDiv.innerHTML = `
-                <i class="fas fa-${icon}"></i>
-                <span>${message}</span>
-            `;
-            
-            document.body.appendChild(alertDiv);
-            
-            setTimeout(() => {
-                alertDiv.classList.add('animate-fade-out');
-                setTimeout(() => alertDiv.remove(), 300);
-            }, 3000);
+            if (user.role === 'admin' || user.role === 'superadmin') {
+                // Add admin menu items if needed
+            }
         }
 
         // =============================================
@@ -683,7 +502,9 @@
                     ...data
                 });
                 
-                const response = await fetch(apiUrl, {
+                console.log('Calling API:', action, data);
+                
+                const response = await fetch(CONFIG.API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -692,12 +513,13 @@
                 });
                 
                 const result = await response.json();
-                hideLoading();
+                console.log('API Response:', result);
                 
                 if (!result.success) {
                     throw new Error(result.error || 'API Error');
                 }
                 
+                hideLoading();
                 return result;
                 
             } catch (error) {
@@ -708,74 +530,96 @@
         }
 
         // =============================================
+        // Login Functions
+        // =============================================
+        async function loginWithLINE() {
+            try {
+                showLoading();
+                
+                // Initialize LIFF
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                
+                // Get user profile
+                const profile = await liff.getProfile();
+                console.log('LINE Profile:', profile);
+                
+                // Get email if available
+                let email = '';
+                try {
+                    const idToken = liff.getIDToken();
+                    if (idToken) {
+                        const decoded = liff.getDecodedIDToken();
+                        email = decoded.email || '';
+                    }
+                } catch (e) {
+                    console.log('Cannot get email:', e);
+                }
+                
+                // Call login API
+                const result = await callAPI('login', {
+                    uid: profile.userId,
+                    lineId: profile.userId,
+                    displayName: profile.displayName,
+                    pictureUrl: profile.pictureUrl || '',
+                    email: email
+                });
+                
+                if (result.success) {
+                    currentUser = result.user;
+                    updateUserUI(currentUser);
+                    showMessage('success', `ยินดีต้อนรับ, ${currentUser.displayName}!`);
+                    
+                    // Load dashboard data
+                    loadDashboardData();
+                }
+                
+            } catch (error) {
+                console.error('Login Error:', error);
+                showMessage('error', 'ไม่สามารถล็อกอินได้: ' + error.message);
+            }
+        }
+
+        function logout() {
+            if (liff.isLoggedIn()) {
+                liff.logout();
+            }
+            window.location.reload();
+        }
+
+        // =============================================
         // Dashboard Functions
         // =============================================
         async function loadDashboardData() {
             try {
                 const data = await callAPI('getDashboardStats');
                 
-                // Update stats cards
-                document.getElementById('totalItems').textContent = data.stats.totalItems || 0;
-                document.getElementById('totalAvailable').textContent = data.stats.totalAvailable || 0;
-                document.getElementById('totalBorrowed').textContent = data.stats.totalBorrowed || 0;
-                document.getElementById('todayBorrowings').textContent = data.stats.todayBorrowings || 0;
-                document.getElementById('overdueItems').textContent = data.stats.overdueItems || 0;
-                document.getElementById('totalUsers').textContent = data.stats.totalUsers || 0;
-                
-                // Update popular items
-                const popularContainer = document.getElementById('popularItems');
-                if (data.popularItems && data.popularItems.length > 0) {
-                    popularContainer.innerHTML = data.popularItems.map((item, index) => `
-                        <div class="flex items-center justify-between p-3 bg-gray-700 rounded hover:bg-gray-600 transition">
-                            <div class="flex items-center space-x-3">
-                                <span class="w-6 h-6 flex items-center justify-center bg-blue-500 rounded-full text-sm">
-                                    ${index + 1}
-                                </span>
-                                <span class="truncate">${item.itemName}</span>
-                            </div>
-                            <span class="text-blue-400 font-semibold">${item.borrowCount} ครั้ง</span>
-                        </div>
-                    `).join('');
-                } else {
-                    popularContainer.innerHTML = `
-                        <div class="text-center py-4 text-gray-500">
-                            <i class="fas fa-chart-line text-2xl mb-2"></i>
-                            <p>ยังไม่มีข้อมูล</p>
-                        </div>
-                    `;
+                // Update stats
+                if (data.stats) {
+                    document.getElementById('totalItems').textContent = data.stats.totalItems;
+                    document.getElementById('availableItems').textContent = data.stats.totalAvailable;
+                    document.getElementById('borrowedItems').textContent = data.stats.totalBorrowed;
+                    document.getElementById('overdueItems').textContent = data.stats.overdueItems;
                 }
                 
-                // Update recent activities
-                const recentContainer = document.getElementById('recentActivities');
-                if (data.recentActivities && data.recentActivities.length > 0) {
-                    recentContainer.innerHTML = data.recentActivities.map(activity => `
-                        <div class="flex items-center space-x-3 p-3 bg-gray-700 rounded hover:bg-gray-600 transition">
-                            <div class="w-8 h-8 flex items-center justify-center rounded-full ${activity.type === 'ยืม' ? 'bg-yellow-500' : 'bg-green-500'}">
-                                <i class="fas fa-${activity.type === 'ยืม' ? 'sign-out-alt' : 'sign-in-alt'} text-white"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm truncate">
-                                    <span class="font-medium">${activity.userName}</span>
-                                    ${activity.type === 'ยืม' ? 'ยืม' : 'คืน'}
-                                    <span class="font-medium">${activity.itemName}</span>
-                                </p>
-                                <p class="text-xs text-gray-400">
-                                    ${formatDateTime(activity.time)}
-                                </p>
-                            </div>
+                // Update popular items
+                if (data.popularItems) {
+                    const popularContainer = document.getElementById('popularItems');
+                    popularContainer.innerHTML = data.popularItems.map(item => `
+                        <div class="flex justify-between items-center p-3 bg-gray-700 rounded mb-2">
+                            <span>${item.itemName}</span>
+                            <span class="text-blue-400 font-bold">${item.borrowCount} ครั้ง</span>
                         </div>
                     `).join('');
-                } else {
-                    recentContainer.innerHTML = `
-                        <div class="text-center py-4 text-gray-500">
-                            <i class="fas fa-clock text-2xl mb-2"></i>
-                            <p>ยังไม่มีกิจกรรมล่าสุด</p>
-                        </div>
-                    `;
                 }
                 
             } catch (error) {
                 console.error('Error loading dashboard:', error);
+                // Keep default data
             }
         }
 
@@ -784,107 +628,156 @@
         // =============================================
         async function loadItems() {
             try {
+                const search = document.getElementById('searchBox').value;
                 const category = document.getElementById('categoryFilter').value;
-                const search = document.getElementById('searchInput').value;
+                const status = document.getElementById('statusFilter').value;
                 
-                // Show loading
                 document.getElementById('itemsLoading').classList.remove('hidden');
-                document.getElementById('itemsContainer').classList.add('hidden');
+                document.getElementById('itemsGrid').innerHTML = '';
+                document.getElementById('noItems').classList.add('hidden');
                 
                 const data = await callAPI('getItems', {
-                    category: category,
+                    category: category === 'all' ? '' : category,
                     search: search
                 });
                 
-                // Hide loading
                 document.getElementById('itemsLoading').classList.add('hidden');
-                document.getElementById('itemsContainer').classList.remove('hidden');
-                
-                const container = document.getElementById('itemsGrid');
                 
                 if (data.items && data.items.length > 0) {
-                    container.innerHTML = data.items.map(item => `
-                        <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition">
-                            <div class="relative">
-                                ${item.imageUrl ? `
-                                    <img src="${item.imageUrl}" alt="${item.itemName}" 
-                                         class="w-full h-48 object-cover">
-                                ` : `
-                                    <div class="w-full h-48 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
-                                        <i class="fas fa-box text-4xl text-gray-500"></i>
-                                    </div>
-                                `}
-                                <span class="absolute top-3 left-3 px-2 py-1 text-xs font-semibold rounded ${
-                                    item.category === 'book' ? 'bg-purple-600' :
-                                    item.category === 'electronic' ? 'bg-blue-600' :
-                                    item.category === 'tool' ? 'bg-yellow-600' :
-                                    item.category === 'sport' ? 'bg-green-600' : 'bg-gray-600'
-                                }">
-                                    ${getCategoryName(item.category)}
-                                </span>
-                                <span class="absolute top-3 right-3 px-2 py-1 text-xs font-semibold rounded ${
-                                    item.available > 0 ? 'bg-green-600' : 'bg-red-600'
-                                }">
-                                    ${item.available > 0 ? 'ว่าง' : 'ไม่ว่าง'}
-                                </span>
-                            </div>
-                            <div class="p-4">
-                                <h3 class="text-lg font-bold mb-1 truncate">${item.itemName}</h3>
-                                <p class="text-gray-400 text-sm mb-3 line-clamp-2">${item.description || 'ไม่มีคำอธิบาย'}</p>
-                                <div class="flex justify-between items-center mb-4">
-                                    <div class="text-sm text-gray-400">
-                                        <i class="fas fa-map-marker-alt mr-1"></i>
-                                        ${item.location || 'ไม่ระบุ'}
-                                    </div>
-                                    <div class="text-sm">
-                                        <span class="font-bold">${item.available}</span>
-                                        <span class="text-gray-400">/${item.quantity}</span>
-                                    </div>
-                                </div>
-                                <button onclick="borrowItem('${item.itemId}', '${item.itemName}')" 
-                                        class="w-full py-2 rounded font-medium transition ${
-                                            item.available > 0 
-                                            ? 'bg-green-600 hover:bg-green-700' 
-                                            : 'bg-gray-700 hover:bg-gray-600 cursor-not-allowed'
-                                        }"
-                                        ${item.available === 0 ? 'disabled' : ''}>
-                                    ${item.available > 0 ? 
-                                        '<i class="fas fa-cart-plus mr-2"></i>ยืมของ' : 
-                                        'ไม่มีของว่าง'
-                                    }
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                    
-                    document.getElementById('noItems').classList.add('hidden');
+                    currentItems = data.items;
+                    renderItems();
                 } else {
-                    container.innerHTML = '';
                     document.getElementById('noItems').classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('Error loading items:', error);
                 document.getElementById('itemsLoading').classList.add('hidden');
-                showMessage('error', 'ไม่สามารถโหลดข้อมูลสิ่งของได้');
+                
+                // Show sample items for testing
+                currentItems = [
+                    {
+                        itemId: 'ITM001',
+                        itemName: 'หนังสือ Python Programming',
+                        description: 'หนังสือสอนภาษา Python สำหรับผู้เริ่มต้น',
+                        category: 'book',
+                        quantity: 10,
+                        available: 10,
+                        location: 'ตู้ A1 ชั้น 1',
+                        imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400'
+                    },
+                    {
+                        itemId: 'ITM002',
+                        itemName: 'เมาส์ไร้สาย Logitech',
+                        description: 'เมาส์ไร้สายรุ่น MX Master 3',
+                        category: 'electronic',
+                        quantity: 5,
+                        available: 5,
+                        location: 'ตู้ B2 ชั้น 2',
+                        imageUrl: 'https://images.unsplash.com/photo-1527814050087-3793815479db?w=400'
+                    },
+                    {
+                        itemId: 'ITM003',
+                        itemName: 'ไขควงชุด 12 ชิ้น',
+                        description: 'ชุดไขควงคุณภาพดี 12 ชิ้นในกล่อง',
+                        category: 'tool',
+                        quantity: 3,
+                        available: 3,
+                        location: 'ตู้ C3 ชั้น 3',
+                        imageUrl: 'https://images.unsplash.com/photo-1585771724684-382b6b673c5d?w=400'
+                    }
+                ];
+                renderItems();
             }
         }
 
-        async function borrowItem(itemId, itemName) {
-            if (!confirm(`คุณต้องการยืม "${itemName}" ใช่หรือไม่?`)) return;
+        function renderItems() {
+            const container = document.getElementById('itemsGrid');
+            const statusFilter = document.getElementById('statusFilter').value;
             
+            const filteredItems = currentItems.filter(item => {
+                if (statusFilter === 'available') {
+                    return item.available > 0;
+                } else if (statusFilter === 'unavailable') {
+                    return item.available === 0;
+                }
+                return true;
+            });
+            
+            if (filteredItems.length === 0) {
+                document.getElementById('noItems').classList.remove('hidden');
+                return;
+            }
+            
+            container.innerHTML = filteredItems.map(item => `
+                <div class="card">
+                    <div class="mb-4">
+                        <img src="${item.imageUrl || CONFIG.DEFAULT_IMAGE}" 
+                             alt="${item.itemName}"
+                             class="w-full h-48 object-cover rounded">
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">${item.itemName}</h3>
+                    <p class="text-gray-400 text-sm mb-3">${item.description || 'ไม่มีคำอธิบาย'}</p>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-sm text-gray-300">
+                            <i class="fas fa-map-marker-alt mr-1"></i>${item.location || 'ไม่ระบุ'}
+                        </span>
+                        <span class="font-bold ${item.available > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${item.available}/${item.quantity}
+                        </span>
+                    </div>
+                    <button onclick="borrowItem('${item.itemId}')" 
+                            class="w-full py-2 rounded font-medium ${item.available > 0 ? 'btn-success' : 'bg-gray-700'} text-white"
+                            ${item.available === 0 ? 'disabled' : ''}>
+                        ${item.available > 0 ? 
+                            '<i class="fas fa-cart-plus mr-2"></i>ยืมของ' : 
+                            'ไม่มีของว่าง'
+                        }
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function searchItems() {
+            loadItems();
+        }
+
+        function filterItems() {
+            renderItems();
+        }
+
+        async function quickBorrow(itemId) {
+            await borrowItem(itemId);
+        }
+
+        async function borrowItem(itemId) {
             try {
-                const dueDate = new Date();
-                dueDate.setDate(dueDate.getDate() + 7); // Due in 7 days
+                const item = currentItems.find(i => i.itemId === itemId);
+                if (!item) {
+                    showMessage('error', 'ไม่พบสิ่งของ');
+                    return;
+                }
                 
-                const data = await callAPI('borrowItem', {
+                if (item.available <= 0) {
+                    showMessage('error', 'สิ่งของนี้ไม่ว่างสำหรับยืม');
+                    return;
+                }
+                
+                if (!confirm(`คุณต้องการยืม "${item.itemName}" ใช่หรือไม่?\nกรุณาคืนภายใน 7 วัน`)) {
+                    return;
+                }
+                
+                const result = await callAPI('borrowItem', {
                     itemId: itemId,
                     displayName: currentUser.displayName,
-                    dueDate: dueDate.toISOString().split('T')[0]
+                    lineId: currentUser.lineId
                 });
                 
-                showMessage('success', data.message || 'ยืมของสำเร็จ!');
-                loadItems(); // Refresh items list
+                if (result.success) {
+                    showMessage('success', result.message || 'ยืมของสำเร็จ!');
+                    loadItems(); // Refresh items
+                    loadDashboardData(); // Refresh dashboard
+                }
                 
             } catch (error) {
                 console.error('Error borrowing item:', error);
@@ -892,93 +785,92 @@
         }
 
         // =============================================
-        // My Borrowings Functions
+        // Borrowings Functions
         // =============================================
         async function loadMyBorrowings() {
             try {
                 document.getElementById('borrowingsLoading').classList.remove('hidden');
-                document.getElementById('borrowingsContainer').classList.add('hidden');
+                document.getElementById('borrowingsTable').innerHTML = '';
+                document.getElementById('noBorrowings').classList.add('hidden');
                 
                 const data = await callAPI('getMyBorrowings');
                 
                 document.getElementById('borrowingsLoading').classList.add('hidden');
-                document.getElementById('borrowingsContainer').classList.remove('hidden');
                 
-                const filterStatus = document.getElementById('borrowingsFilter').value;
-                let filteredBorrowings = data.borrowings || [];
-                
-                if (filterStatus !== 'all') {
-                    filteredBorrowings = filteredBorrowings.filter(item => {
-                        if (filterStatus === 'overdue') {
-                            return item.status === 'borrowed' && new Date(item.dueDate) < new Date();
-                        }
-                        return item.status === filterStatus;
-                    });
-                }
-                
-                const tableBody = document.getElementById('myBorrowingsTable');
-                document.getElementById('borrowingsCount').textContent = filteredBorrowings.length;
-                
-                if (filteredBorrowings.length > 0) {
-                    tableBody.innerHTML = filteredBorrowings.map(item => {
-                        const isOverdue = item.status === 'borrowed' && new Date(item.dueDate) < new Date();
-                        const statusClass = isOverdue ? 'status-overdue' : 
-                                          item.status === 'borrowed' ? 'status-borrowed' : 
-                                          'status-returned';
-                        const statusText = isOverdue ? 'ค้างคืน' : 
-                                         item.status === 'borrowed' ? 'กำลังยืม' : 'คืนแล้ว';
-                        
-                        return `
-                            <tr class="hover:bg-gray-750 transition">
-                                <td class="px-6 py-4">
-                                    <div class="font-medium">${item.itemName}</div>
-                                    <div class="text-sm text-gray-400">${item.itemId}</div>
-                                </td>
-                                <td class="px-6 py-4">${formatDate(item.borrowDate)}</td>
-                                <td class="px-6 py-4 ${isOverdue ? 'text-red-400 font-semibold' : ''}">
-                                    ${formatDate(item.dueDate)}
-                                    ${isOverdue ? '<i class="fas fa-exclamation-circle ml-1"></i>' : ''}
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="px-3 py-1 rounded-full text-xs font-medium ${statusClass}">
-                                        ${statusText}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    ${item.status === 'borrowed' ? `
-                                        <button onclick="returnItem('${item.borrowId}')" 
-                                                class="px-4 py-1 bg-green-600 rounded hover:bg-green-700 text-sm">
-                                            คืนของ
-                                        </button>
-                                    ` : '-'}
-                                </td>
-                            </tr>
-                        `;
-                    }).join('');
-                    
-                    document.getElementById('noBorrowings').classList.add('hidden');
+                if (data.borrowings && data.borrowings.length > 0) {
+                    currentBorrowings = data.borrowings;
+                    renderBorrowings();
                 } else {
-                    tableBody.innerHTML = '';
                     document.getElementById('noBorrowings').classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('Error loading borrowings:', error);
                 document.getElementById('borrowingsLoading').classList.add('hidden');
-                showMessage('error', 'ไม่สามารถโหลดรายการยืมได้');
+                
+                // Show sample data for testing
+                currentBorrowings = [];
+                document.getElementById('noBorrowings').classList.remove('hidden');
             }
         }
 
-        async function returnItem(borrowId) {
-            if (!confirm('คุณต้องการคืนสิ่งของใช่หรือไม่?')) return;
+        function renderBorrowings() {
+            const tableBody = document.getElementById('borrowingsTable');
             
+            tableBody.innerHTML = currentBorrowings.map(borrow => {
+                const isOverdue = borrow.isOverdue;
+                const status = borrow.status;
+                
+                let statusClass = 'status-returned';
+                let statusText = 'คืนแล้ว';
+                
+                if (status === 'borrowed') {
+                    statusClass = isOverdue ? 'status-overdue' : 'status-borrowed';
+                    statusText = isOverdue ? 'ค้างคืน' : 'กำลังยืม';
+                }
+                
+                return `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-4 px-4">
+                            <div class="font-medium">${borrow.itemName}</div>
+                            <div class="text-sm text-gray-400">${borrow.itemId}</div>
+                        </td>
+                        <td class="py-4 px-4">${formatDate(borrow.borrowDate)}</td>
+                        <td class="py-4 px-4 ${isOverdue ? 'text-red-400 font-bold' : ''}">
+                            ${formatDate(borrow.dueDate)}
+                            ${isOverdue ? '<i class="fas fa-exclamation-circle ml-1"></i>' : ''}
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="${statusClass}">${statusText}</span>
+                        </td>
+                        <td class="py-4 px-4">
+                            ${status === 'borrowed' ? `
+                                <button onclick="returnItem('${borrow.borrowId}')" 
+                                        class="btn-success text-sm">
+                                    <i class="fas fa-undo mr-1"></i>คืนของ
+                                </button>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function returnItem(borrowId) {
             try {
-                const data = await callAPI('returnItem', {
+                if (!confirm('คุณต้องการคืนสิ่งของใช่หรือไม่?')) {
+                    return;
+                }
+                
+                const result = await callAPI('returnItem', {
                     borrowId: borrowId
                 });
                 
-                showMessage('success', data.message || 'คืนของสำเร็จ!');
-                loadMyBorrowings(); // Refresh borrowings list
+                if (result.success) {
+                    showMessage('success', result.message || 'คืนของสำเร็จ!');
+                    loadMyBorrowings(); // Refresh borrowings
+                    loadDashboardData(); // Refresh dashboard
+                }
                 
             } catch (error) {
                 console.error('Error returning item:', error);
@@ -986,243 +878,69 @@
         }
 
         // =============================================
-        // Admin Items Functions
-        // =============================================
-        async function loadAdminItems() {
-            try {
-                const search = document.getElementById('adminSearchItems').value;
-                const category = document.getElementById('adminCategoryFilter').value;
-                
-                const data = await callAPI('getItems', {
-                    category: category === 'all' ? '' : category,
-                    search: search
-                });
-                
-                const container = document.getElementById('adminItemsContainer');
-                
-                if (data.items && data.items.length > 0) {
-                    container.innerHTML = `
-                        <div class="overflow-x-auto rounded-lg border border-gray-700">
-                            <table class="min-w-full bg-gray-800">
-                                <thead class="bg-gray-700">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left">ชื่อสิ่งของ</th>
-                                        <th class="px-6 py-3 text-left">หมวดหมู่</th>
-                                        <th class="px-6 py-3 text-left">จำนวน</th>
-                                        <th class="px-6 py-3 text-left">สถานที่</th>
-                                        <th class="px-6 py-3 text-left">การดำเนินการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-700">
-                                    ${data.items.map(item => `
-                                        <tr class="hover:bg-gray-750 transition">
-                                            <td class="px-6 py-4">
-                                                <div class="font-medium">${item.itemName}</div>
-                                                <div class="text-sm text-gray-400">${item.itemId}</div>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                <span class="px-2 py-1 text-xs rounded bg-gray-700">
-                                                    ${getCategoryName(item.category)}
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                <div class="flex items-center">
-                                                    <span class="font-medium ${item.available > 0 ? 'text-green-400' : 'text-red-400'}">
-                                                        ${item.available}
-                                                    </span>
-                                                    <span class="text-gray-400 mx-1">/</span>
-                                                    <span>${item.quantity}</span>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4">${item.location || '-'}</td>
-                                            <td class="px-6 py-4">
-                                                <div class="flex space-x-2">
-                                                    <button onclick="editItem('${item.itemId}')" 
-                                                            class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">
-                                                        <i class="fas fa-edit mr-1"></i>แก้ไข
-                                                    </button>
-                                                    <button onclick="deleteItem('${item.itemId}', '${item.itemName}')" 
-                                                            class="px-3 py-1 bg-red-600 rounded hover:bg-red-700 text-sm">
-                                                        <i class="fas fa-trash mr-1"></i>ลบ
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="text-center py-12 text-gray-500">
-                            <i class="fas fa-box-open text-4xl mb-4"></i>
-                            <p>ไม่พบสิ่งของ</p>
-                        </div>
-                    `;
-                }
-                
-            } catch (error) {
-                console.error('Error loading admin items:', error);
-                showMessage('error', 'ไม่สามารถโหลดข้อมูลได้');
-            }
-        }
-
-        function showAddItemModal() {
-            document.getElementById('modalTitle').textContent = 'เพิ่มสิ่งของใหม่';
-            document.getElementById('itemForm').reset();
-            document.getElementById('editItemId').value = '';
-            document.getElementById('itemModal').classList.remove('hidden');
-        }
-
-        function editItem(itemId) {
-            // This function would fetch item details and populate the modal
-            // For now, we'll just show a message
-            showMessage('info', 'ฟังก์ชันแก้ไขจะเปิดใช้งานเร็วๆ นี้');
-        }
-
-        async function deleteItem(itemId, itemName) {
-            if (!confirm(`คุณต้องการลบ "${itemName}" ใช่หรือไม่?\nการลบนี้ไม่สามารถย้อนกลับได้!`)) return;
-            
-            try {
-                const data = await callAPI('deleteItem', {
-                    itemId: itemId
-                });
-                
-                showMessage('success', data.message || 'ลบสิ่งของสำเร็จ!');
-                loadAdminItems(); // Refresh items list
-                
-            } catch (error) {
-                console.error('Error deleting item:', error);
-            }
-        }
-
-        async function saveItem(event) {
-            event.preventDefault();
-            
-            try {
-                const itemId = document.getElementById('editItemId').value;
-                const isEdit = itemId !== '';
-                
-                const formData = {
-                    itemName: document.getElementById('itemName').value,
-                    description: document.getElementById('itemDescription').value,
-                    category: document.getElementById('itemCategory').value,
-                    quantity: document.getElementById('itemQuantity').value,
-                    available: document.getElementById('itemAvailable').value,
-                    location: document.getElementById('itemLocation').value,
-                    imageUrl: document.getElementById('itemImageUrl').value,
-                    barcode: document.getElementById('itemBarcode').value
-                };
-                
-                if (isEdit) {
-                    formData.itemId = itemId;
-                    await callAPI('updateItem', formData);
-                } else {
-                    await callAPI('addItem', formData);
-                }
-                
-                closeItemModal();
-                showMessage('success', `สิ่งของ${isEdit ? 'ถูกอัปเดต' : 'ถูกเพิ่ม'}สำเร็จ!`);
-                loadAdminItems();
-                
-            } catch (error) {
-                console.error('Error saving item:', error);
-            }
-        }
-
-        function closeItemModal() {
-            document.getElementById('itemModal').classList.add('hidden');
-        }
-
-        // =============================================
         // Utility Functions
         // =============================================
         function formatDate(dateString) {
             if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('th-TH', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        function formatDateTime(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleTimeString('th-TH', {
-                hour: '2-digit',
-                minute: '2-digit'
-            }) + ' ' + formatDate(dateString);
-        }
-
-        function getCategoryName(category) {
-            const categories = {
-                'book': 'หนังสือ',
-                'electronic': 'อุปกรณ์อิเล็กทรอนิกส์',
-                'tool': 'เครื่องมือ',
-                'sport': 'กีฬา',
-                'other': 'อื่นๆ'
-            };
-            return categories[category] || category;
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('th-TH', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            } catch (e) {
+                return dateString;
+            }
         }
 
         // =============================================
-        // Event Listeners
+        // Initialize App
         // =============================================
-        document.addEventListener('DOMContentLoaded', () => {
-            // Mobile menu toggle
-            document.getElementById('menuToggle').addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('active');
-                document.getElementById('sidebarOverlay').classList.toggle('active');
-            });
-            
-            // Close sidebar when clicking overlay
-            document.getElementById('sidebarOverlay').addEventListener('click', () => {
-                document.getElementById('sidebar').classList.remove('active');
-                document.getElementById('sidebarOverlay').classList.remove('active');
-            });
-            
-            // Login button
-            document.getElementById('loginBtn').addEventListener('click', manualLogin);
-            
-            // Logout button
-            document.getElementById('logoutBtn').addEventListener('click', () => {
-                if (liff.isLoggedIn()) {
-                    liff.logout();
-                    window.location.reload();
+        async function initializeApp() {
+            try {
+                // Check if LIFF is available
+                if (typeof liff === 'undefined') {
+                    showMessage('error', 'กรุณาเปิดแอพผ่าน LINE');
+                    return;
                 }
-            });
-            
-            // Items search and filter
-            document.getElementById('categoryFilter').addEventListener('change', loadItems);
-            document.getElementById('searchInput').addEventListener('input', 
-                debounce(loadItems, 500));
-            
-            // Borrowings filter
-            document.getElementById('borrowingsFilter').addEventListener('change', loadMyBorrowings);
-            
-            // Admin items search
-            document.getElementById('adminSearchItems').addEventListener('input', 
-                debounce(loadAdminItems, 500));
-            document.getElementById('adminCategoryFilter').addEventListener('change', loadAdminItems);
-            
-            // Initialize LIFF on page load
-            initializeLiff();
-        });
+                
+                // Initialize LIFF
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                
+                // Check if already logged in
+                if (liff.isLoggedIn()) {
+                    showLoading();
+                    
+                    // Get profile and auto login
+                    const profile = await liff.getProfile();
+                    const result = await callAPI('login', {
+                        uid: profile.userId,
+                        lineId: profile.userId,
+                        displayName: profile.displayName,
+                        pictureUrl: profile.pictureUrl || ''
+                    });
+                    
+                    if (result.success) {
+                        currentUser = result.user;
+                        updateUserUI(currentUser);
+                        loadDashboardData();
+                    }
+                    
+                    hideLoading();
+                }
+                
+            } catch (error) {
+                console.error('App Initialization Error:', error);
+                // Show login screen normally
+            }
+        }
+
+        // Start the app when page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
+
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
 </body>
 </html>
