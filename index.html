@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบยืมคืน - LIFF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'kanit': ['Kanit', 'sans-serif']
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e'
+                        },
+                        dark: {
+                            800: '#1e293b',
+                            900: '#0f172a'
+                        }
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * {
+            font-family: 'Kanit', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="font-kanit">
+    <!-- Header -->
+    <header class="glass-effect sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold">ระบบยืมคืน</h1>
+                        <p class="text-xs text-gray-400">แอปพลิเคชันสำหรับยืมคืนสินค้า</p>
+                    </div>
+                </div>
+                <div id="userProfile" class="flex items-center space-x-3">
+                    <!-- User profile will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- User Info Card -->
+        <div class="glass-effect rounded-xl p-6 mb-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <img id="userPicture" src="" alt="Profile" class="w-16 h-16 rounded-full border-2 border-primary-500">
+                    <div>
+                        <h2 id="userName" class="text-xl font-bold">กำลังโหลด...</h2>
+                        <p id="userStatus" class="text-gray-400 text-sm">กำลังดึงข้อมูลผู้ใช้</p>
+                        <p id="userRole" class="text-xs px-2 py-1 bg-primary-500/20 text-primary-400 rounded-full inline-block mt-1">
+                            กำลังโหลด...
+                        </p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-400">สมาชิกตั้งแต่</p>
+                    <p id="userSince" class="font-medium">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="glass-effect rounded-xl p-4 text-center card-hover active:scale-95 transition-transform">
+                <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
+                <p class="font-medium">ยืมสินค้า</p>
+            </div>
+            
+            <div class="glass-effect rounded-xl p-4 text-center card-hover active:scale-95 transition-transform">
+                <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <p class="font-medium">คืนสินค้า</p>
+            </div>
+        </div>
+
+        <!-- My Borrowing -->
+        <div class="mb-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                สินค้าที่กำลังยืม
+            </h3>
+            <div id="borrowingList" class="space-y-3">
+                <!-- Borrowing items will be loaded here -->
+                <div class="text-center py-8">
+                    <p class="text-gray-400">กำลังโหลดข้อมูล...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Items -->
+        <div>
+            <h3 class="text-lg font-bold mb-4 flex items-center justify-between">
+                <span class="flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    สินค้าพร้อมยืม
+                </span>
+                <span class="text-sm font-normal text-gray-400" id="itemsCount">0 รายการ</span>
+            </h3>
+            <div id="availableItemsList" class="space-y-3">
+                <!-- Available items will be loaded here -->
+                <div class="text-center py-8">
+                    <p class="text-gray-400">กำลังโหลดสินค้า...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Borrow Modal -->
+    <div id="borrowModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="glass-effect rounded-xl w-full max-w-sm">
+            <div class="p-6">
+                <h3 class="text-lg font-bold mb-4" id="borrowItemName">ยืมสินค้า</h3>
+                <form id="borrowForm">
+                    <input type="hidden" id="borrowItemId">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">จำนวนที่ต้องการยืม</label>
+                            <input type="number" id="borrowQuantity" min="1" value="1" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <p class="text-xs text-gray-400 mt-1" id="availableQuantityText">มีพร้อมให้ยืม: <span id="availableQuantity">0</span> ชิ้น</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">กำหนดคืน</label>
+                            <input type="date" id="dueDate" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">หมายเหตุ (ถ้ามี)</label>
+                            <textarea id="borrowNotes" rows="2" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" onclick="closeBorrowModal()" class="px-4 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                            ยืนยันการยืม
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec'; // ใส่ URL ของ Google Apps Script ของคุณตรงนี้
+        let liffInitialized = false;
+        let userProfile = null;
+        
+        // ฟังก์ชันเรียกใช้ API
+        async function callApi(action, data = {}) {
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action,
+                        ...data
+                    })
+                });
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                return { success: false, message: 'Network error' };
+            }
+        }
+        
+        // ฟังก์ชันเริ่มต้น LIFF
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: 'YOUR_LIFF_ID_HERE' });
+                liffInitialized = true;
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                
+                // ดึงข้อมูลโปรไฟล์
+                const profile = await liff.getProfile();
+                userProfile = profile;
+                
+                // Login ด้วยระบบของเรา
+                const loginResponse = await callApi('login', {
+                    uid: profile.userId,
+                    displayName: profile.displayName,
+                    pictureUrl: profile.pictureUrl,
+                    statusMessage: profile.statusMessage
+                });
+                
+                if (loginResponse.success) {
+                    // โหลดข้อมูลผู้ใช้
+                    await loadUserProfile(profile.userId);
+                    // โหลดสินค้าที่พร้อมยืม
+                    await loadAvailableItems();
+                    // โหลดรายการที่กำลังยืม
+                    await loadBorrowingList(profile.userId);
+                }
+                
+            } catch (error) {
+                console.error('LIFF Initialization Error:', error);
+                document.getElementById('userName').textContent = 'เกิดข้อผิดพลาด';
+                document.getElementById('userStatus').textContent = 'ไม่สามารถเชื่อมต่อ LIFF ได้';
+            }
+        }
+        
+        // ฟังก์ชันโหลดข้อมูลผู้ใช้
+        async function loadUserProfile(uid) {
+            const response = await callApi('getUserProfile', { uid: uid });
+            
+            if (response.success) {
+                const profile = response.profile;
+                
+                // แสดงข้อมูลผู้ใช้
+                document.getElementById('userName').textContent = profile.displayName;
+                document.getElementById('userStatus').textContent = profile.statusMessage || 'ไม่มีสถานะ';
+                document.getElementById('userRole').textContent = profile.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป';
+                document.getElementById('userSince').textContent = new Date(profile.createdAt).toLocaleDateString('th-TH');
+                
+                const userPicture = document.getElementById('userPicture');
+                if (profile.pictureUrl) {
+                    userPicture.src = profile.pictureUrl;
+                } else {
+                    userPicture.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.displayName) + '&background=0ea5e9&color=fff';
+                }
+                
+                // แสดงข้อมูลใน header
+                const userProfileDiv = document.getElementById('userProfile');
+                userProfileDiv.innerHTML = `
+                    <div class="text-right">
+                        <p class="font-medium text-sm">${profile.displayName.split(' ')[0]}</p>
+                        <p class="text-xs text-gray-400">${profile.role === 'admin' ? 'ผู้ดูแล' : 'ผู้ใช้'}</p>
+                    </div>
+                    <img src="${profile.pictureUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.displayName) + '&background=0ea5e9&color=fff'}" 
+                         alt="Profile" class="w-10 h-10 rounded-full border border-primary-500">
+                `;
+            }
+        }
+        
+        // ฟังก์ชันโหลดสินค้าที่พร้อมยืม
+        async function loadAvailableItems() {
+            const response = await callApi('getItems');
+            
+            if (response.success) {
+                const items = response.items.filter(item => item.available > 0 && item.status === 'active');
+                const itemsList = document.getElementById('availableItemsList');
+                const itemsCount = document.getElementById('itemsCount');
+                
+                itemsCount.textContent = items.length + ' รายการ';
+                
+                if (items.length === 0) {
+                    itemsList.innerHTML = `
+                        <div class="text-center py-8">
+                            <p class="text-gray-400">ไม่มีสินค้าพร้อมยืมในขณะนี้</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                items.forEach(item => {
+                    html += `
+                        <div class="glass-effect rounded-xl p-4 card-hover active:scale-95 transition-transform" onclick="showBorrowModal('${item.id}', '${item.name}', ${item.available})">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold">${item.name}</h4>
+                                    <p class="text-sm text-gray-400 mt-1">${item.description || 'ไม่มีรายละเอียด'}</p>
+                                    <div class="flex items-center space-x-3 mt-2">
+                                        <span class="text-xs px-2 py-1 bg-gray-700/50 rounded">${item.category || 'ทั่วไป'}</span>
+                                        <span class="text-xs text-green-400 flex items-center">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            พร้อมให้ยืม ${item.available} ชิ้น
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm text-gray-400">${item.location || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                itemsList.innerHTML = html;
+            }
+        }
+        
+        // ฟังก์ชันโหลดรายการที่กำลังยืม
+        async function loadBorrowingList(uid) {
+            // ในตัวอย่างนี้จะใช้การจำลองข้อมูล
+            // ควรปรับให้ดึงข้อมูลจริงจาก API
+            const borrowingList = document.getElementById('borrowingList');
+            borrowingList.innerHTML = `
+                <div class="text-center py-8">
+                    <p class="text-gray-400">คุณยังไม่มีการยืมสินค้า</p>
+                    <button onclick="loadAvailableItems()" class="mt-2 text-primary-400 text-sm hover:underline">
+                        ดูสินค้าที่พร้อมยืม
+                    </button>
+                </div>
+            `;
+        }
+        
+        // ฟังก์ชันแสดง Modal ยืมสินค้า
+        function showBorrowModal(itemId, itemName, availableQuantity) {
+            document.getElementById('borrowItemId').value = itemId;
+            document.getElementById('borrowItemName').textContent = `ยืมสินค้า: ${itemName}`;
+            document.getElementById('availableQuantity').textContent = availableQuantity;
+            document.getElementById('availableQuantityText').style.display = 'block';
+            
+            // กำหนดวันที่คืนเริ่มต้น (3 วันจากวันนี้)
+            const today = new Date();
+            const dueDate = new Date(today);
+            dueDate.setDate(today.getDate() + 3);
+            document.getElementById('dueDate').valueAsDate = dueDate;
+            
+            document.getElementById('borrowModal').classList.remove('hidden');
+            document.getElementById('borrowModal').classList.add('flex');
+        }
+        
+        function closeBorrowModal() {
+            document.getElementById('borrowModal').classList.add('hidden');
+            document.getElementById('borrowModal').classList.remove('flex');
+        }
+        
+        // ฟังก์ชันยืมสินค้า
+        document.getElementById('borrowForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!userProfile) {
+                alert('กรุณาเข้าสู่ระบบก่อน');
+                return;
+            }
+            
+            const itemId = document.getElementById('borrowItemId').value;
+            const quantity = parseInt(document.getElementById('borrowQuantity').value);
+            const dueDate = document.getElementById('dueDate').value;
+            const notes = document.getElementById('borrowNotes').value;
+            
+            const response = await callApi('borrowItem', {
+                uid: userProfile.userId,
+                itemId: itemId,
+                quantity: quantity,
+                dueDate: dueDate,
+                notes: notes
+            });
+            
+            if (response.success) {
+                alert('ยืมสินค้าสำเร็จ!');
+                closeBorrowModal();
+                await loadAvailableItems();
+                await loadBorrowingList(userProfile.userId);
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + response.message);
+            }
+        });
+        
+        // เริ่มต้นทำงาน
+        document.addEventListener('DOMContentLoaded', async function() {
+            // กำหนดวันที่สำหรับ input date
+            const today = new Date().toISOString().split('T')[0];
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(input => {
+                input.min = today;
+            });
+            
+            // เริ่มต้น LIFF
+            await initializeLiff();
+        });
+        
+        // ฟังก์ชัน Logout
+        function logout() {
+            if (liffInitialized) {
+                liff.logout();
+                window.location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
