@@ -3,210 +3,503 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบยืมคืนสินค้า</title>
+    <title>ระบบยืมคืนออนไลน์</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- Google Fonts Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
-        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .spinner { border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        * {
+            font-family: 'Kanit', sans-serif;
+        }
+        .dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
-<body class="text-white">
-    <div class="container mx-auto px-4 py-6 max-w-lg">
-        <!-- Loading -->
-        <div id="loading" class="text-center py-20">
-            <div class="spinner mx-auto mb-4"></div>
-            <p>กำลังโหลด...</p>
+<body class="dark-mode min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <button id="menuToggle" class="lg:hidden">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <h1 class="text-xl font-bold">ระบบยืมคืน</h1>
         </div>
+        <div class="flex items-center space-x-4">
+            <div id="userProfile" class="hidden flex items-center space-x-2">
+                <img id="userPicture" class="w-8 h-8 rounded-full" src="" alt="Profile">
+                <span id="userName" class="text-sm"></span>
+                <span id="userRole" class="px-2 py-1 text-xs bg-blue-600 rounded-full"></span>
+            </div>
+            <button id="logoutBtn" class="hidden px-4 py-2 bg-red-600 rounded hover:bg-red-700">
+                ออกจากระบบ
+            </button>
+            <button id="loginBtn" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">
+                ล็อกอินด้วย LINE
+            </button>
+        </div>
+    </nav>
 
-        <!-- Main Content -->
-        <div id="app" class="hidden">
-            <!-- Header -->
-            <div class="glass rounded-2xl p-6 mb-4">
-                <div class="flex items-center space-x-4">
-                    <img id="userPic" src="" class="w-16 h-16 rounded-full border-2 border-white" alt="Profile">
-                    <div>
-                        <h2 id="userName" class="text-xl font-bold">-</h2>
-                        <p id="userRole" class="text-sm opacity-80">-</p>
+    <!-- Main Layout -->
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="sidebar bg-gray-900 text-white w-64 min-h-screen p-4 lg:block">
+            <div class="space-y-2 mt-4">
+                <button onclick="showSection('dashboard')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    <span>แดชบอร์ด</span>
+                </button>
+                
+                <button onclick="showSection('browseItems')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    <span>รายการสิ่งของ</span>
+                </button>
+                
+                <button onclick="showSection('myBorrowings')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>รายการยืมของฉัน</span>
+                </button>
+                
+                <!-- Admin Only Sections -->
+                <div id="adminSections" class="hidden">
+                    <div class="px-4 py-2 text-sm text-gray-400 border-t border-gray-700 mt-4">
+                        สำหรับผู้ดูแลระบบ
                     </div>
+                    
+                    <button onclick="showSection('manageItems')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        <span>จัดการสิ่งของ</span>
+                    </button>
+                    
+                    <button onclick="showSection('manageBorrowings')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <span>จัดการการยืมคืน</span>
+                    </button>
+                    
+                    <button onclick="showSection('manageUsers')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0c-.281.023-.562.035-.843.035-3.71 0-6.572-2.853-6.572-6.354 0-1.5.572-2.8 1.525-3.782"></path>
+                        </svg>
+                        <span>จัดการผู้ใช้งาน</span>
+                    </button>
+                    
+                    <button onclick="showSection('systemSettings')" class="sidebar-btn w-full text-left px-4 py-3 rounded hover:bg-gray-700 flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>ตั้งค่าระบบ</span>
+                    </button>
                 </div>
             </div>
+        </aside>
 
-            <!-- Tabs -->
-            <div class="flex space-x-2 mb-4">
-                <button onclick="showTab('borrow')" id="tab-borrow" class="flex-1 py-2 px-4 rounded-lg bg-white text-purple-600 font-medium">ยืมสินค้า</button>
-                <button onclick="showTab('myborrow')" id="tab-myborrow" class="flex-1 py-2 px-4 rounded-lg bg-white/20">รายการของฉัน</button>
-                <button onclick="showTab('return')" id="tab-return" class="flex-1 py-2 px-4 rounded-lg bg-white/20">คืนสินค้า</button>
+        <!-- Main Content -->
+        <main class="flex-1 p-6">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section hidden">
+                <h2 class="text-2xl font-bold mb-6">แดชบอร์ด</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-gray-800 p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold text-gray-300">สิ่งของทั้งหมด</h3>
+                        <p id="totalItems" class="text-3xl font-bold mt-2">0</p>
+                    </div>
+                    <div class="bg-gray-800 p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold text-gray-300">การยืมคืนวันนี้</h3>
+                        <p id="todayBorrowings" class="text-3xl font-bold mt-2">0</p>
+                    </div>
+                    <div class="bg-gray-800 p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold text-gray-300">ค้างคืน</h3>
+                        <p id="overdueItems" class="text-3xl font-bold mt-2">0</p>
+                    </div>
+                    <div class="bg-gray-800 p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold text-gray-300">ผู้ใช้งาน</h3>
+                        <p id="totalUsers" class="text-3xl font-bold mt-2">0</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-gray-800 p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold mb-4">สิ่งของยอดนิยม</h3>
+                        <div id="popularItems" class="space-y-3">
+                            <!-- จะแสดงข้อมูลจาก API -->
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800 p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold mb-4">กิจกรรมล่าสุด</h3>
+                        <div id="recentActivities" class="space-y-3">
+                            <!-- จะแสดงข้อมูลจาก API -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Browse Items Section -->
+            <section id="browseItems" class="section hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">รายการสิ่งของ</h2>
+                    <div class="flex space-x-4">
+                        <select id="categoryFilter" class="bg-gray-700 text-white px-4 py-2 rounded">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="book">หนังสือ</option>
+                            <option value="electronic">อุปกรณ์อิเล็กทรอนิกส์</option>
+                            <option value="tool">เครื่องมือ</option>
+                            <option value="other">อื่นๆ</option>
+                        </select>
+                        <input type="text" id="searchInput" placeholder="ค้นหาสิ่งของ..." class="bg-gray-700 text-white px-4 py-2 rounded w-64">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="itemsGrid">
+                    <!-- จะแสดงข้อมูลสิ่งของจาก API -->
+                </div>
+            </section>
+
+            <!-- My Borrowings Section -->
+            <section id="myBorrowings" class="section hidden">
+                <h2 class="text-2xl font-bold mb-6">รายการยืมของฉัน</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-800 rounded-lg overflow-hidden">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left">สิ่งของ</th>
+                                <th class="px-6 py-3 text-left">วันที่ยืม</th>
+                                <th class="px-6 py-3 text-left">กำหนดคืน</th>
+                                <th class="px-6 py-3 text-left">สถานะ</th>
+                                <th class="px-6 py-3 text-left">การดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="myBorrowingsTable" class="divide-y divide-gray-700">
+                            <!-- จะแสดงข้อมูลจาก API -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Admin Sections will be added similarly -->
+            
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
             </div>
-
-            <!-- Content -->
-            <div id="content"></div>
-        </div>
+        </main>
     </div>
 
     <script>
-        const SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL'; // ⚠️ ใส่ URL ของคุณที่นี่
-        let userId = null;
-        let currentTab = 'borrow';
+        // =============================================
+        // Global Variables
+        // =============================================
+        let currentUser = null;
+        let liffId = 'YOUR_LIFF_ID_HERE'; // ใส่ LIFF ID ของคุณ
+        const apiUrl = 'YOUR_APPS_SCRIPT_WEB_APP_URL'; // ใส่ URL ของ Web App
 
-        // Init LIFF
-        async function initApp() {
+        // =============================================
+        // LIFF Initialization
+        // =============================================
+        async function initializeLiff() {
             try {
-                await liff.init({ liffId: '2008904120-hDgwl23w' });
-                if (!liff.isLoggedIn()) { liff.login(); return; }
+                await liff.init({ liffId: liffId });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
                 
                 const profile = await liff.getProfile();
-                userId = profile.userId;
-
-                // Login to system
-                const res = await callApi('login', {
-                    uid: profile.userId,
-                    displayName: profile.displayName,
-                    pictureUrl: profile.pictureUrl,
-                    statusMessage: profile.statusMessage || ''
+                const idToken = liff.getIDToken();
+                
+                // ส่งข้อมูลไปยัง backend
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        uid: profile.userId,
+                        lineId: profile.userId,
+                        displayName: profile.displayName,
+                        pictureUrl: profile.pictureUrl || '',
+                        email: liff.getDecodedIDToken().email || ''
+                    })
                 });
-
-                if (res.success) {
-                    document.getElementById('userPic').src = profile.pictureUrl || 'https://via.placeholder.com/64';
-                    document.getElementById('userName').textContent = profile.displayName;
-                    
-                    const userData = await callApi('getUserProfile', { uid: userId });
-                    if (userData.success) {
-                        document.getElementById('userRole').textContent = userData.profile.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน';
-                    }
-
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('app').classList.remove('hidden');
-                    showTab('borrow');
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    updateUIAfterLogin();
+                    showSection('dashboard');
+                    loadDashboardData();
                 }
-            } catch (err) {
-                alert('เกิดข้อผิดพลาด: ' + err.message);
+                
+            } catch (error) {
+                console.error('LIFF Error:', error);
+                showMessage('error', 'เกิดข้อผิดพลาดในการล็อกอิน');
             }
         }
 
-        // Call API
-        async function callApi(action, data = {}) {
-            const res = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, ...data })
-            });
-            return await res.json();
-        }
-
-        // Show Tab
-        function showTab(tab) {
-            currentTab = tab;
-            ['borrow', 'myborrow', 'return'].forEach(t => {
-                const btn = document.getElementById(`tab-${t}`);
-                btn.className = t === tab ? 'flex-1 py-2 px-4 rounded-lg bg-white text-purple-600 font-medium' : 'flex-1 py-2 px-4 rounded-lg bg-white/20';
-            });
-
-            if (tab === 'borrow') loadBorrowTab();
-            else if (tab === 'myborrow') loadMyBorrowTab();
-            else if (tab === 'return') loadReturnTab();
-        }
-
-        // Load Borrow Tab
-        async function loadBorrowTab() {
-            const res = await callApi('getItems');
-            const items = res.success ? res.items.filter(i => i.available > 0 && i.status === 'active') : [];
+        // =============================================
+        // UI Functions
+        // =============================================
+        function updateUIAfterLogin() {
+            document.getElementById('loginBtn').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            document.getElementById('userProfile').classList.remove('hidden');
             
-            let html = '<div class="space-y-3">';
-            if (items.length === 0) {
-                html += '<p class="text-center py-8">ไม่มีสินค้าพร้อมยืม</p>';
-            } else {
-                items.forEach(item => {
-                    html += `
-                        <div class="glass rounded-xl p-4 hover:bg-white/20 cursor-pointer transition" onclick="borrowItem('${item.id}', '${item.name}', ${item.available})">
-                            <h3 class="font-bold">${item.name}</h3>
-                            <p class="text-sm opacity-80">${item.description || '-'}</p>
-                            <div class="flex justify-between mt-2">
-                                <span class="text-xs px-2 py-1 bg-white/20 rounded">${item.category || 'ทั่วไป'}</span>
-                                <span class="text-xs text-green-300">✓ ${item.available} ชิ้น</span>
+            document.getElementById('userPicture').src = currentUser.pictureUrl;
+            document.getElementById('userName').textContent = currentUser.displayName;
+            document.getElementById('userRole').textContent = 
+                currentUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน';
+            
+            // แสดงเมนู admin ถ้าเป็น admin
+            if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                document.getElementById('adminSections').classList.remove('hidden');
+            }
+        }
+
+        function showSection(sectionId) {
+            // ซ่อนทุก section
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // แสดง section ที่ต้องการ
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // ปิดเมนูบนมือถือ
+            document.querySelector('.sidebar').classList.remove('active');
+        }
+
+        function showLoading() {
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.add('hidden');
+        }
+
+        function showMessage(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-600' : 
+                type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+            } text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // =============================================
+        // API Functions
+        // =============================================
+        async function callAPI(action, data = {}) {
+            try {
+                showLoading();
+                
+                const params = new URLSearchParams({
+                    action: action,
+                    uid: currentUser?.uid || '',
+                    ...data
+                });
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+                
+                const result = await response.json();
+                hideLoading();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'API Error');
+                }
+                
+                return result;
+                
+            } catch (error) {
+                hideLoading();
+                showMessage('error', error.message);
+                throw error;
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                const data = await callAPI('getDashboardStats');
+                
+                // อัปเดตตัวเลขบนแดชบอร์ด
+                document.getElementById('totalItems').textContent = data.totalItems || 0;
+                document.getElementById('todayBorrowings').textContent = data.todayBorrowings || 0;
+                document.getElementById('overdueItems').textContent = data.overdueItems || 0;
+                document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+                
+                // อัปเดตรายการยอดนิยม
+                const popularContainer = document.getElementById('popularItems');
+                if (data.popularItems) {
+                    popularContainer.innerHTML = data.popularItems.map(item => `
+                        <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+                            <span>${item.itemName}</span>
+                            <span class="text-blue-400">${item.borrowCount} ครั้ง</span>
+                        </div>
+                    `).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadItems() {
+            try {
+                const category = document.getElementById('categoryFilter').value;
+                const search = document.getElementById('searchInput').value;
+                
+                const data = await callAPI('getItems', {
+                    category: category,
+                    search: search
+                });
+                
+                const container = document.getElementById('itemsGrid');
+                container.innerHTML = data.items.map(item => `
+                    <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                        ${item.imageUrl ? `
+                            <img src="${item.imageUrl}" alt="${item.itemName}" 
+                                 class="w-full h-48 object-cover">
+                        ` : `
+                            <div class="w-full h-48 bg-gray-700 flex items-center justify-center">
+                                <svg class="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
                             </div>
+                        `}
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold mb-2">${item.itemName}</h3>
+                            <p class="text-gray-400 mb-3">${item.description || 'ไม่มีคำอธิบาย'}</p>
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="px-3 py-1 bg-blue-600 rounded-full text-sm">
+                                    ${item.category}
+                                </span>
+                                <span class="text-lg font-bold">
+                                    ${item.available}/${item.quantity}
+                                </span>
+                            </div>
+                            <button onclick="borrowItem('${item.itemId}')" 
+                                    class="w-full py-2 bg-green-600 hover:bg-green-700 rounded 
+                                           ${item.available === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    ${item.available === 0 ? 'disabled' : ''}>
+                                ${item.available === 0 ? 'ไม่มีของว่าง' : 'ยืมของ'}
+                            </button>
                         </div>
-                    `;
-                });
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading items:', error);
             }
-            html += '</div>';
-            document.getElementById('content').innerHTML = html;
         }
 
-        // Load My Borrow Tab
-        async function loadMyBorrowTab() {
-            const res = await callApi('getTransactions', { userUid: userId, type: 'borrow' });
-            const items = res.success ? res.transactions.filter(t => t.status === 'borrowed') : [];
+        async function borrowItem(itemId) {
+            if (!confirm('คุณต้องการยืมสิ่งนี้ใช่หรือไม่?')) return;
             
-            let html = '<div class="space-y-3">';
-            if (items.length === 0) {
-                html += '<p class="text-center py-8">คุณยังไม่มีการยืมสินค้า</p>';
-            } else {
-                items.forEach(item => {
-                    html += `
-                        <div class="glass rounded-xl p-4">
-                            <h3 class="font-bold">${item.item_name}</h3>
-                            <p class="text-sm">จำนวน: ${item.quantity} ชิ้น</p>
-                            <p class="text-sm">กำหนดคืน: ${formatDate(item.due_date)}</p>
-                            <button onclick="returnItem('${item.id}', '${item.item_name}', ${item.quantity})" class="mt-2 w-full py-2 bg-green-500 rounded-lg hover:bg-green-600">คืนสินค้า</button>
-                        </div>
-                    `;
+            try {
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 7); // คืนภายใน 7 วัน
+                
+                const data = await callAPI('borrowItem', {
+                    itemId: itemId,
+                    dueDate: dueDate.toISOString().split('T')[0]
                 });
+                
+                showMessage('success', data.message);
+                loadItems(); // รีเฟรชรายการ
+                
+            } catch (error) {
+                console.error('Error borrowing item:', error);
             }
-            html += '</div>';
-            document.getElementById('content').innerHTML = html;
         }
 
-        // Load Return Tab
-        async function loadReturnTab() {
-            await loadMyBorrowTab();
-        }
-
-        // Borrow Item
-        async function borrowItem(itemId, itemName, available) {
-            const qty = prompt(`ยืม ${itemName}\nจำนวน (มีพร้อม ${available} ชิ้น):`, '1');
-            if (!qty || isNaN(qty) || qty < 1 || qty > available) return;
-
-            const dueDate = prompt('กำหนดคืน (yyyy-mm-dd):', new Date(Date.now() + 3*24*60*60*1000).toISOString().split('T')[0]);
-            if (!dueDate) return;
-
-            const res = await callApi('borrowItem', {
-                uid: userId,
-                itemId: itemId,
-                quantity: parseInt(qty),
-                dueDate: dueDate,
-                notes: ''
+        // =============================================
+        // Event Listeners
+        // =============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // เปิด/ปิดเมนูบนมือถือ
+            document.getElementById('menuToggle').addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.toggle('active');
             });
-
-            alert(res.success ? 'ยืมสินค้าสำเร็จ!' : 'เกิดข้อผิดพลาด: ' + res.message);
-            if (res.success) loadBorrowTab();
-        }
-
-        // Return Item
-        async function returnItem(txId, itemName, qty) {
-            if (!confirm(`ยืนยันคืน ${itemName} จำนวน ${qty} ชิ้น?`)) return;
-
-            const res = await callApi('returnItem', {
-                uid: userId,
-                transactionId: txId,
-                notes: ''
+            
+            // ปุ่มล็อกอิน
+            document.getElementById('loginBtn').addEventListener('click', () => {
+                initializeLiff();
             });
+            
+            // ปุ่มล็อกเอาต์
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                if (liff.isLoggedIn()) {
+                    liff.logout();
+                    window.location.reload();
+                }
+            });
+            
+            // กรองและค้นหาสิ่งของ
+            document.getElementById('categoryFilter').addEventListener('change', loadItems);
+            document.getElementById('searchInput').addEventListener('input', 
+                debounce(loadItems, 500));
+            
+            // เริ่มต้น LIFF ถ้ามีการล็อกอินอยู่แล้ว
+            if (window.location.hash) {
+                initializeLiff();
+            }
+        });
 
-            alert(res.success ? 'คืนสินค้าสำเร็จ!' : 'เกิดข้อผิดพลาด: ' + res.message);
-            if (res.success) loadMyBorrowTab();
+        // =============================================
+        // Utility Functions
+        // =============================================
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
         }
-
-        // Format Date
-        function formatDate(d) {
-            if (!d) return '-';
-            const date = new Date(d);
-            return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-        }
-
-        // Start
-        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
