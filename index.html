@@ -853,12 +853,13 @@
         </div>
     </div>
 
-    <!-- Add Item Modal -->
+    <!-- Add/Edit Item Modal -->
     <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
         <div class="dark-card p-6 w-full max-w-md border border-gray-800">
             <h3 class="text-xl font-bold mb-4" id="itemModalTitle">เพิ่มสิ่งของใหม่</h3>
             
             <div class="space-y-4">
+                <input type="hidden" id="itemIdInput">
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">ชื่อสิ่งของ</label>
                     <input type="text" id="itemNameInput" class="input-dark w-full" placeholder="กรอกชื่อสิ่งของ">
@@ -959,6 +960,57 @@
         </div>
     </div>
 
+    <!-- User Status Modal -->
+    <div id="userStatusModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
+        <div class="dark-card p-6 w-full max-w-md border border-gray-800">
+            <h3 class="text-xl font-bold mb-4" id="userStatusModalTitle">จัดการสถานะผู้ใช้</h3>
+            
+            <div class="space-y-4">
+                <div class="p-4 bg-gray-800/50 rounded-xl border border-gray-800">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <img id="statusUserAvatar" class="w-12 h-12 rounded-full border-2 border-gray-700" src="" alt="">
+                        <div>
+                            <h4 id="statusUserName" class="font-bold"></h4>
+                            <p id="statusUserLineId" class="text-sm text-gray-400"></p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-400">บทบาท</p>
+                            <span id="statusUserRole" class="badge-user"></span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-400">สถานะปัจจุบัน</p>
+                            <span id="currentUserStatus" class="font-semibold"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-3">เปลี่ยนสถานะเป็น</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="selectUserStatus('active')" id="statusActiveBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-green-500 hover:bg-green-900/20 transition">
+                            <i class="fas fa-check-circle text-green-400 text-lg mb-2"></i>
+                            <p class="text-sm font-medium">เปิดใช้งาน</p>
+                        </button>
+                        <button onclick="selectUserStatus('inactive')" id="statusInactiveBtn" class="p-3 border border-gray-700 rounded-xl text-center hover:border-red-500 hover:bg-red-900/20 transition">
+                            <i class="fas fa-ban text-red-400 text-lg mb-2"></i>
+                            <p class="text-sm font-medium">ปิดการใช้งาน</p>
+                        </button>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="statusTargetUserId">
+                <input type="hidden" id="selectedUserStatus" value="active">
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closeUserStatusModal()" class="btn-danger">ยกเลิก</button>
+                <button onclick="updateUserStatus()" class="btn-success">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // =============================================
         // Configuration
@@ -982,6 +1034,7 @@
         };
         let notifications = [];
         let settings = {};
+        let editItemId = null;
 
         // =============================================
         // UI Functions
@@ -1209,20 +1262,24 @@
         }
 
         function openAddItemModal() {
+            editItemId = null;
             document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
             document.getElementById('saveItemBtn').textContent = 'บันทึก';
             document.getElementById('addItemModal').classList.remove('hidden');
             
             // Clear inputs
-            ['itemNameInput', 'itemDescInput', 'itemLocationInput', 'itemImageInput'].forEach(id => {
-                document.getElementById(id).value = '';
-            });
+            document.getElementById('itemIdInput').value = '';
+            document.getElementById('itemNameInput').value = '';
+            document.getElementById('itemDescInput').value = '';
+            document.getElementById('itemLocationInput').value = '';
+            document.getElementById('itemImageInput').value = '';
             document.getElementById('itemQuantityInput').value = '1';
             document.getElementById('itemCategoryInput').value = 'book';
         }
 
         function closeItemModal() {
             document.getElementById('addItemModal').classList.add('hidden');
+            editItemId = null;
         }
 
         function openRoleModal(user) {
@@ -1266,6 +1323,57 @@
                     selectedBtn.classList.add('border-purple-500', 'bg-purple-900/20');
                 } else {
                     selectedBtn.classList.add('border-orange-500', 'bg-orange-900/20');
+                }
+            }
+        }
+
+        function openUserStatusModal(user) {
+            document.getElementById('statusTargetUserId').value = user.uid;
+            document.getElementById('statusUserName').textContent = user.displayName;
+            document.getElementById('statusUserLineId').textContent = user.lineId;
+            
+            const roleText = user.role === 'admin' ? 'แอดมิน' : 
+                            user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
+            const roleClass = user.role === 'admin' ? 'badge-admin' : 
+                            user.role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
+            
+            document.getElementById('statusUserRole').textContent = roleText;
+            document.getElementById('statusUserRole').className = roleClass;
+            
+            document.getElementById('currentUserStatus').textContent = user.status === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน';
+            document.getElementById('currentUserStatus').className = user.status === 'active' ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold';
+            
+            document.getElementById('statusUserAvatar').src = 
+                user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`;
+            
+            // Set selected status
+            selectUserStatus(user.status);
+            
+            document.getElementById('userStatusModal').classList.remove('hidden');
+        }
+
+        function closeUserStatusModal() {
+            document.getElementById('userStatusModal').classList.add('hidden');
+        }
+
+        function selectUserStatus(status) {
+            document.getElementById('selectedUserStatus').value = status;
+            
+            // Reset all buttons
+            ['statusActiveBtn', 'statusInactiveBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.classList.remove('border-green-500', 'bg-green-900/20', 'border-red-500', 'bg-red-900/20');
+                btn.classList.add('border-gray-700');
+            });
+            
+            // Highlight selected button
+            const selectedBtn = document.getElementById(`status${status.charAt(0).toUpperCase() + status.slice(1)}Btn`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('border-gray-700');
+                if (status === 'active') {
+                    selectedBtn.classList.add('border-green-500', 'bg-green-900/20');
+                } else {
+                    selectedBtn.classList.add('border-red-500', 'bg-red-900/20');
                 }
             }
         }
@@ -1820,7 +1928,7 @@
         }
 
         // =============================================
-        // Admin Functions
+        // Admin Functions - Pending Requests
         // =============================================
         async function loadPendingRequests() {
             try {
@@ -2026,6 +2134,9 @@
             }
         }
 
+        // =============================================
+        // Admin Functions - Manage Items
+        // =============================================
         async function loadItemsForManagement() {
             try {
                 const data = await callAPI('getItemsForManagement');
@@ -2102,25 +2213,40 @@
         }
 
         async function editItem(itemId) {
-            const item = currentItems.find(i => i.itemId === itemId);
-            if (item) {
-                document.getElementById('itemModalTitle').textContent = 'แก้ไขสิ่งของ';
-                document.getElementById('saveItemBtn').textContent = 'อัปเดต';
+            try {
+                const result = await callAPI('getItemDetails', {
+                    itemId: itemId
+                });
                 
-                document.getElementById('itemNameInput').value = item.itemName;
-                document.getElementById('itemDescInput').value = item.description || '';
-                document.getElementById('itemCategoryInput').value = item.category || 'book';
-                document.getElementById('itemQuantityInput').value = item.quantity || 1;
-                document.getElementById('itemLocationInput').value = item.location || '';
-                document.getElementById('itemImageInput').value = item.imageUrl || '';
-                
-                document.getElementById('addItemModal').classList.remove('hidden');
+                if (result.success && result.item) {
+                    const item = result.item;
+                    editItemId = itemId;
+                    
+                    document.getElementById('itemModalTitle').textContent = 'แก้ไขสิ่งของ';
+                    document.getElementById('saveItemBtn').textContent = 'อัปเดต';
+                    
+                    document.getElementById('itemIdInput').value = itemId;
+                    document.getElementById('itemNameInput').value = item.itemName || '';
+                    document.getElementById('itemDescInput').value = item.description || '';
+                    document.getElementById('itemCategoryInput').value = item.category || 'book';
+                    document.getElementById('itemQuantityInput').value = item.quantity || 1;
+                    document.getElementById('itemLocationInput').value = item.location || '';
+                    document.getElementById('itemImageInput').value = item.imageUrl || '';
+                    
+                    document.getElementById('addItemModal').classList.remove('hidden');
+                }
+            } catch (error) {
+                showMessage('error', 'ไม่สามารถโหลดข้อมูลได้', error.message);
             }
         }
 
         async function saveItem() {
             try {
+                const itemId = document.getElementById('itemIdInput').value;
+                const isEdit = !!itemId;
+                
                 const itemData = {
+                    itemId: itemId,
                     itemName: document.getElementById('itemNameInput').value.trim(),
                     description: document.getElementById('itemDescInput').value.trim(),
                     category: document.getElementById('itemCategoryInput').value,
@@ -2134,13 +2260,21 @@
                     return;
                 }
                 
-                const result = await callAPI('addItem', itemData);
+                if (itemData.quantity < 1) {
+                    showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
+                    return;
+                }
+                
+                const action = isEdit ? 'updateItem' : 'addItem';
+                const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
+                
+                const result = await callAPI(action, itemData);
                 
                 if (result.success) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'เพิ่มสิ่งของสำเร็จ!',
-                        text: `เพิ่ม ${itemData.itemName} เรียบร้อยแล้ว`,
+                        title: successMessage,
+                        text: `${itemData.itemName} เรียบร้อยแล้ว`,
                         timer: 3000,
                         showConfirmButton: false,
                         background: '#1e293b',
@@ -2212,6 +2346,9 @@
             });
         }
 
+        // =============================================
+        // Admin Functions - Manage Users
+        // =============================================
         async function loadUsers() {
             try {
                 document.getElementById('usersLoading').classList.remove('hidden');
@@ -2259,12 +2396,9 @@
                                  user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
                             </span>
                             
-                            ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
-                                <button onclick="openRoleModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
-                                        class="btn-purple text-sm">
-                                    <i class="fas fa-user-cog mr-2"></i>จัดการสิทธิ์
-                                </button>
-                            ` : ''}
+                            <span class="font-semibold ${user.status === 'active' ? 'text-green-400' : 'text-red-400'}">
+                                ${user.status === 'active' ? 'ใช้งาน' : 'ปิดการใช้งาน'}
+                            </span>
                         </div>
                     </div>
                     
@@ -2274,12 +2408,6 @@
                             <p class="font-medium">${formatDate(user.createdAt)}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400">สถานะ</p>
-                            <span class="font-medium ${user.status === 'active' ? 'text-green-400' : 'text-red-400'}">
-                                ${user.status === 'active' ? 'ใช้งาน' : 'ปิดการใช้งาน'}
-                            </span>
-                        </div>
-                        <div>
                             <p class="text-gray-400">ยืมทั้งหมด</p>
                             <p class="font-medium">${user.totalBorrowed || 0} ครั้ง</p>
                         </div>
@@ -2287,6 +2415,26 @@
                             <p class="text-gray-400">คืนแล้ว</p>
                             <p class="font-medium">${user.totalReturned || 0} ครั้ง</p>
                         </div>
+                        <div>
+                            <p class="text-gray-400">ค้างชำระ</p>
+                            <p class="font-medium">${user.totalOverdue || 0} ครั้ง</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-4">
+                        ${currentUser.uid !== user.uid ? `
+                            <button onclick="openUserStatusModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
+                                    class="btn-warning text-sm">
+                                <i class="fas fa-user-cog mr-2"></i>สถานะ
+                            </button>
+                        ` : ''}
+                        
+                        ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
+                            <button onclick="openRoleModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
+                                    class="btn-purple text-sm">
+                                <i class="fas fa-user-shield mr-2"></i>บทบาท
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `).join('');
@@ -2318,19 +2466,13 @@
             const newRole = document.getElementById('selectedRole').value;
             
             try {
-                let result;
-                if (newRole === 'admin' || newRole === 'superadmin') {
-                    result = await callAPI('promoteToAdmin', {
-                        targetUserId: userId,
-                        role: newRole
-                    });
-                } else {
-                    result = await callAPI('demoteToUser', {
-                        targetUserId: userId
-                    });
-                }
+                const result = await callAPI('updateUserRole', {
+                    targetUserId: userId,
+                    role: newRole
+                });
                 
                 if (result.success) {
+                    // Update local data
                     const user = currentAdminData.users.find(u => u.uid === userId);
                     if (user) {
                         user.role = newRole;
@@ -2348,12 +2490,60 @@
                     
                     closeRoleModal();
                     renderUsers();
+                    
+                    // If current user changed their own role
+                    if (currentUser.uid === userId) {
+                        currentUser.role = newRole;
+                        updateUserUI(currentUser);
+                    }
                 }
                 
             } catch (error) {
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถเปลี่ยนบทบาทได้',
+                    text: error.message,
+                    background: '#1e293b',
+                    color: '#e2e8f0'
+                });
+            }
+        }
+
+        async function updateUserStatus() {
+            const userId = document.getElementById('statusTargetUserId').value;
+            const newStatus = document.getElementById('selectedUserStatus').value;
+            
+            try {
+                const result = await callAPI('updateUserStatus', {
+                    targetUserId: userId,
+                    status: newStatus
+                });
+                
+                if (result.success) {
+                    // Update local data
+                    const user = currentAdminData.users.find(u => u.uid === userId);
+                    if (user) {
+                        user.status = newStatus;
+                    }
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'เปลี่ยนสถานะสำเร็จ!',
+                        text: result.message || 'เปลี่ยนสถานะผู้ใช้เรียบร้อยแล้ว',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    
+                    closeUserStatusModal();
+                    renderUsers();
+                }
+                
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถเปลี่ยนสถานะได้',
                     text: error.message,
                     background: '#1e293b',
                     color: '#e2e8f0'
