@@ -60,7 +60,6 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
         
-        /* Loading spinner */
         .spinner {
             border: 3px solid rgba(255, 255, 255, 0.1);
             border-radius: 50%;
@@ -73,6 +72,15 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
 </head>
@@ -101,45 +109,50 @@
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-6">
-        <!-- User Info Card -->
-        <div class="glass-effect rounded-xl p-6 mb-6 card-hover">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <img id="userPicture" src="" alt="Profile" class="w-16 h-16 rounded-full border-2 border-primary-500">
-                    <div>
-                        <h2 id="userName" class="text-xl font-bold">กำลังโหลด...</h2>
-                        <p id="userStatus" class="text-gray-400 text-sm">กำลังดึงข้อมูลผู้ใช้</p>
-                        <p id="userRole" class="text-xs px-2 py-1 bg-primary-500/20 text-primary-400 rounded-full inline-block mt-1">
-                            กำลังโหลด...
-                        </p>
+        <!-- Loading -->
+        <div id="loading" class="text-center py-12 fade-in">
+            <div class="spinner mx-auto mb-4" style="width: 40px; height: 40px;"></div>
+            <p class="text-gray-400">กำลังโหลด...</p>
+        </div>
+
+        <!-- Content -->
+        <div id="content" class="hidden">
+            <!-- User Info Card -->
+            <div class="glass-effect rounded-xl p-6 mb-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <img id="userPicture" src="" alt="Profile" class="w-16 h-16 rounded-full border-2 border-primary-500">
+                        <div>
+                            <h2 id="userName" class="text-xl font-bold">-</h2>
+                            <p id="userStatus" class="text-gray-400 text-sm">-</p>
+                            <p id="userRole" class="text-xs px-2 py-1 bg-primary-500/20 text-primary-400 rounded-full inline-block mt-1">
+                                -
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">สมาชิกตั้งแต่</p>
+                        <p id="userSince" class="font-medium">-</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm text-gray-400">สมาชิกตั้งแต่</p>
-                    <p id="userSince" class="font-medium">-</p>
-                </div>
             </div>
-        </div>
 
-        <!-- Tabs -->
-        <div class="flex space-x-2 mb-6">
-            <button id="tabBorrow" class="tab-btn px-4 py-2 rounded-lg bg-primary-600 text-white font-medium" onclick="switchTab('borrow')">
-                ยืมสินค้า
-            </button>
-            <button id="tabMyBorrow" class="tab-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 font-medium" onclick="switchTab('myBorrow')">
-                รายการยืมของฉัน
-            </button>
-            <button id="tabReturn" class="tab-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 font-medium" onclick="switchTab('return')">
-                คืนสินค้า
-            </button>
-        </div>
+            <!-- Tabs -->
+            <div class="flex space-x-2 mb-6 overflow-x-auto pb-2">
+                <button id="tabBorrow" class="tab-btn px-4 py-2 rounded-lg bg-primary-600 text-white font-medium whitespace-nowrap" onclick="switchTab('borrow')">
+                    ยืมสินค้า
+                </button>
+                <button id="tabMyBorrow" class="tab-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 font-medium whitespace-nowrap" onclick="switchTab('myBorrow')">
+                    รายการยืมของฉัน
+                </button>
+                <button id="tabReturn" class="tab-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 font-medium whitespace-nowrap" onclick="switchTab('return')">
+                    คืนสินค้า
+                </button>
+            </div>
 
-        <!-- Tab Content -->
-        <div id="tabContent">
-            <!-- Content will be loaded here -->
-            <div class="text-center py-12">
-                <div class="spinner mx-auto mb-4"></div>
-                <p class="text-gray-400">กำลังโหลด...</p>
+            <!-- Tab Content -->
+            <div id="tabContent" class="fade-in">
+                <!-- Content will be loaded here -->
             </div>
         </div>
     </main>
@@ -155,7 +168,7 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">จำนวนที่ต้องการยืม</label>
                             <input type="number" id="borrowQuantity" min="1" value="1" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                            <p class="text-xs text-gray-400 mt-1" id="availableQuantityText">มีพร้อมให้ยืม: <span id="availableQuantity">0</span> ชิ้น</p>
+                            <p class="text-xs text-gray-400 mt-1">มีพร้อมให้ยืม: <span id="availableQuantity">0</span> ชิ้น</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">กำหนดคืน</label>
@@ -215,43 +228,56 @@
 
     <!-- Scripts -->
     <script>
+        // ใช้ Google Apps Script URL ของคุณที่นี่
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec';
         let liffInitialized = false;
         let userProfile = null;
         let currentTab = 'borrow';
+        let currentUserId = null;
         
         // ฟังก์ชันเรียกใช้ API
         async function callApi(action, data = {}) {
             try {
-                console.log('Calling API:', action, data);
+                console.log('📡 เรียกใช้ API:', action, data);
+                
+                // ใช้วิธี POST พร้อม JSON
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action,
+                        action: action,
                         ...data
                     })
                 });
                 
                 const result = await response.json();
-                console.log('API Response:', action, result);
+                console.log('✅ API Response:', action, result);
                 return result;
+                
             } catch (error) {
-                console.error('API Error:', error);
-                return { success: false, message: 'Network error: ' + error.message };
+                console.error('❌ API Error:', error);
+                return { 
+                    success: false, 
+                    message: 'ข้อผิดพลาดเครือข่าย: ' + error.message 
+                };
             }
         }
         
         // ฟังก์ชันเริ่มต้น LIFF
         async function initializeLiff() {
             try {
-                // ใช้ LIFF ID ของคุณที่นี่
-                await liff.init({ liffId: '2008904120-1qG8pJxK' });
+                // ใช้ LIFF ID ของคุณ
+                await liff.init({ 
+                    liffId: '2008904120-hDgwl23w'
+                });
+                
                 liffInitialized = true;
                 
+                // ตรวจสอบการล็อกอิน
                 if (!liff.isLoggedIn()) {
+                    console.log('🔐 ยังไม่ล็อกอิน, กำลังล็อกอิน...');
                     liff.login();
                     return;
                 }
@@ -259,19 +285,25 @@
                 // ดึงข้อมูลโปรไฟล์
                 const profile = await liff.getProfile();
                 userProfile = profile;
-                console.log('LIFF Profile:', profile);
+                currentUserId = profile.userId;
                 
-                // Login ด้วยระบบของเรา
+                console.log('👤 LIFF Profile:', profile);
+                
+                // ล็อกอินด้วยระบบของเรา
                 const loginResponse = await callApi('login', {
                     uid: profile.userId,
                     displayName: profile.displayName,
-                    pictureUrl: profile.pictureUrl,
-                    statusMessage: profile.statusMessage
+                    pictureUrl: profile.pictureUrl || '',
+                    statusMessage: profile.statusMessage || ''
                 });
                 
-                console.log('Login Response:', loginResponse);
+                console.log('🔑 Login Response:', loginResponse);
                 
                 if (loginResponse.success) {
+                    // ซ่อน loading
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('content').classList.remove('hidden');
+                    
                     // โหลดข้อมูลผู้ใช้
                     await loadUserProfile(profile.userId);
                     // โหลดหน้าเริ่มต้น
@@ -281,17 +313,28 @@
                 }
                 
             } catch (error) {
-                console.error('LIFF Initialization Error:', error);
-                document.getElementById('userName').textContent = 'เกิดข้อผิดพลาด';
-                document.getElementById('userStatus').textContent = 'ไม่สามารถเชื่อมต่อ LIFF ได้';
+                console.error('❌ LIFF Initialization Error:', error);
                 
                 // แสดงข้อมูลทดสอบถ้า LIFF ล้มเหลว
                 userProfile = {
-                    userId: 'test_user_' + Date.now(),
+                    userId: 'demo_user_' + Date.now(),
                     displayName: 'ผู้ใช้ทดสอบ',
                     pictureUrl: '',
                     statusMessage: 'ใช้งานในโหมดทดสอบ'
                 };
+                currentUserId = userProfile.userId;
+                
+                // ซ่อน loading
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+                
+                // ล็อกอินด้วยระบบ
+                await callApi('login', {
+                    uid: userProfile.userId,
+                    displayName: userProfile.displayName,
+                    pictureUrl: userProfile.pictureUrl,
+                    statusMessage: userProfile.statusMessage
+                });
                 
                 await loadUserProfile(userProfile.userId);
                 await loadTabContent(currentTab);
@@ -315,7 +358,7 @@
                 if (profile.pictureUrl) {
                     userPicture.src = profile.pictureUrl;
                 } else {
-                    userPicture.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.displayName) + '&background=0ea5e9&color=fff';
+                    userPicture.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName)}&background=0ea5e9&color=fff`;
                 }
                 
                 // แสดงข้อมูลใน header
@@ -325,7 +368,7 @@
                         <p class="font-medium text-sm">${profile.displayName.split(' ')[0]}</p>
                         <p class="text-xs text-gray-400">${profile.role === 'admin' ? 'ผู้ดูแล' : 'ผู้ใช้'}</p>
                     </div>
-                    <img src="${profile.pictureUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.displayName) + '&background=0ea5e9&color=fff'}" 
+                    <img src="${profile.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName)}&background=0ea5e9&color=fff`}" 
                          alt="Profile" class="w-10 h-10 rounded-full border border-primary-500">
                 `;
             }
@@ -341,8 +384,9 @@
                 btn.classList.add('bg-gray-700', 'text-gray-300');
             });
             
-            document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1))
-                .classList.add('bg-primary-600', 'text-white');
+            const tabId = 'tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            document.getElementById(tabId).classList.add('bg-primary-600', 'text-white');
+            document.getElementById(tabId).classList.remove('bg-gray-700', 'text-gray-300');
             
             // โหลดเนื้อหาแท็บ
             loadTabContent(tabName);
@@ -453,7 +497,7 @@
         async function loadMyBorrowTab() {
             const tabContent = document.getElementById('tabContent');
             
-            if (!userProfile) {
+            if (!currentUserId) {
                 tabContent.innerHTML = `
                     <div class="text-center py-12">
                         <p class="text-gray-400">กรุณาเข้าสู่ระบบก่อน</p>
@@ -484,10 +528,10 @@
         
         // ฟังก์ชันโหลดรายการที่กำลังยืม
         async function loadBorrowingList() {
-            if (!userProfile) return;
+            if (!currentUserId) return;
             
             const response = await callApi('getTransactions', {
-                userUid: userProfile.userId,
+                userUid: currentUserId,
                 type: 'borrow'
             });
             
@@ -577,10 +621,10 @@
         }
         
         async function loadReturnItems() {
-            if (!userProfile) return;
+            if (!currentUserId) return;
             
             const response = await callApi('getTransactions', {
-                userUid: userProfile.userId,
+                userUid: currentUserId,
                 type: 'borrow'
             });
             
@@ -659,7 +703,6 @@
             const dueDateInput = document.getElementById('dueDate');
             dueDateInput.min = today.toISOString().split('T')[0];
             dueDateInput.valueAsDate = dueDate;
-            dueDateInput.value = dueDate.toISOString().split('T')[0];
             
             document.getElementById('borrowNotes').value = '';
             
@@ -692,7 +735,7 @@
         document.getElementById('borrowForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            if (!userProfile) {
+            if (!currentUserId) {
                 alert('กรุณาเข้าสู่ระบบก่อน');
                 return;
             }
@@ -724,7 +767,7 @@
             
             try {
                 const response = await callApi('borrowItem', {
-                    uid: userProfile.userId,
+                    uid: currentUserId,
                     itemId: itemId,
                     quantity: quantity,
                     dueDate: dueDate,
@@ -752,7 +795,7 @@
         document.getElementById('returnForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            if (!userProfile) {
+            if (!currentUserId) {
                 alert('กรุณาเข้าสู่ระบบก่อน');
                 return;
             }
@@ -771,7 +814,7 @@
             
             try {
                 const response = await callApi('returnItem', {
-                    uid: userProfile.userId,
+                    uid: currentUserId,
                     transactionId: transactionId,
                     notes: notes
                 });
@@ -807,16 +850,50 @@
         // ฟังก์ชันช่วยเหลือ
         function formatDate(dateString) {
             if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('th-TH', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '-';
+                
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    timeZone: 'Asia/Bangkok'
+                };
+                return date.toLocaleDateString('th-TH', options);
+            } catch {
+                return '-';
+            }
         }
         
         function showError(message) {
-            alert('ข้อผิดพลาด: ' + message);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+        
+        // ฟังก์ชัน Logout
+        function logout() {
+            if (liffInitialized && liff.isLoggedIn()) {
+                liff.logout();
+                window.location.reload();
+            }
         }
         
         // เริ่มต้นทำงาน
@@ -826,15 +903,15 @@
                 await initializeLiff();
             } catch (error) {
                 console.error('Initialization error:', error);
-                showError('ไม่สามารถเริ่มต้นแอปพลิเคชันได้: ' + error.message);
+                showError('ไม่สามารถเริ่มต้นแอปพลิเคชันได้');
             }
         });
         
-        // ฟังก์ชัน Logout
-        function logout() {
-            if (liffInitialized && liff.isLoggedIn()) {
-                liff.logout();
-                window.location.reload();
+        // ฟังก์ชันรีเฟรช
+        function refreshData() {
+            if (currentUserId) {
+                loadTabContent(currentTab);
+                showSuccess('รีเฟรชข้อมูลสำเร็จ');
             }
         }
     </script>
