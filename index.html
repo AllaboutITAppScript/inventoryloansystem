@@ -716,12 +716,50 @@
                     <div class="dark-card p-6 border border-gray-800">
                         <h3 class="text-xl font-bold mb-6">จัดการผู้ใช้</h3>
                         
-                        <!-- User Search -->
-                        <div class="mb-6">
-                            <input type="text" id="userSearch" placeholder="ค้นหาผู้ใช้..." 
-                                   class="input-dark w-full" oninput="searchUsers()">
+                        <!-- Search and Filter Bar -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div class="md:col-span-2">
+                                <input type="text" id="userSearch" placeholder="ค้นหาชื่อ, LINE ID, อีเมล..." 
+                                       class="input-dark w-full" oninput="searchUsersHandler()">
+                            </div>
+                            <div>
+                                <select id="userRoleFilter" class="input-dark w-full" onchange="searchUsersHandler()">
+                                    <option value="all">บทบาททั้งหมด</option>
+                                    <option value="user">ผู้ใช้ทั่วไป</option>
+                                    <option value="admin">แอดมิน</option>
+                                    <option value="superadmin">ซุปเปอร์แอดมิน</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select id="userStatusFilter" class="input-dark w-full" onchange="searchUsersHandler()">
+                                    <option value="all">สถานะทั้งหมด</option>
+                                    <option value="active">เปิดใช้งาน</option>
+                                    <option value="inactive">ปิดการใช้งาน</option>
+                                </select>
+                            </div>
                         </div>
                         
+                        <!-- Users Statistics -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div class="dark-card p-4 border border-gray-800 text-center">
+                                <p class="text-gray-400 text-sm">ผู้ใช้ทั้งหมด</p>
+                                <p id="totalUsersCount" class="text-2xl font-bold mt-1">0</p>
+                            </div>
+                            <div class="dark-card p-4 border border-gray-800 text-center">
+                                <p class="text-gray-400 text-sm">ผู้ใช้ทั่วไป</p>
+                                <p id="regularUsersCount" class="text-2xl font-bold mt-1">0</p>
+                            </div>
+                            <div class="dark-card p-4 border border-gray-800 text-center">
+                                <p class="text-gray-400 text-sm">แอดมิน</p>
+                                <p id="adminUsersCount" class="text-2xl font-bold mt-1">0</p>
+                            </div>
+                            <div class="dark-card p-4 border border-gray-800 text-center">
+                                <p class="text-gray-400 text-sm">ซุปเปอร์แอดมิน</p>
+                                <p id="superadminUsersCount" class="text-2xl font-bold mt-1">0</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Users List -->
                         <div id="usersList">
                             <!-- Users will be loaded here -->
                         </div>
@@ -2363,6 +2401,7 @@
                     currentAdminData.users = data.users;
                     currentAdminData.filteredUsers = [...data.users];
                     renderUsers();
+                    updateUserStats(currentAdminData.filteredUsers);
                 } else {
                     document.getElementById('noUsers').classList.remove('hidden');
                 }
@@ -2378,7 +2417,7 @@
             const container = document.getElementById('usersList');
             
             container.innerHTML = currentAdminData.filteredUsers.map(user => `
-                <div class="dark-card p-6 mb-4 border border-gray-800">
+                <div class="dark-card p-6 mb-4 border border-gray-800 hover:border-purple-500 transition">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4">
                         <div class="flex items-center space-x-4">
                             <img src="${user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`}" 
@@ -2402,7 +2441,7 @@
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                         <div>
                             <p class="text-gray-400">วันที่สมัคร</p>
                             <p class="font-medium">${formatDate(user.createdAt)}</p>
@@ -2422,6 +2461,11 @@
                     </div>
                     
                     <div class="flex justify-end space-x-3 mt-4">
+                        <button onclick="loadUserDetails('${user.uid}')" 
+                                class="btn-primary text-sm">
+                            <i class="fas fa-eye mr-2"></i>ดูรายละเอียด
+                        </button>
+                        
                         ${currentUser.uid !== user.uid ? `
                             <button onclick="openUserStatusModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
                                     class="btn-warning text-sm">
@@ -2440,20 +2484,241 @@
             `).join('');
         }
 
-        function searchUsers() {
-            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
-            if (!searchTerm) {
-                currentAdminData.filteredUsers = [...currentAdminData.users];
-            } else {
-                currentAdminData.filteredUsers = currentAdminData.users.filter(user => 
-                    user.displayName.toLowerCase().includes(searchTerm) ||
-                    user.lineId.toLowerCase().includes(searchTerm) ||
-                    user.email.toLowerCase().includes(searchTerm) ||
-                    (user.role === 'admin' ? 'แอดมิน' : 
-                     user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป').includes(searchTerm)
-                );
+        // =============================================
+        // ฟังก์ชันใหม่สำหรับจัดการผู้ใช้งาน
+        // =============================================
+
+        async function loadUserDetails(userId) {
+            try {
+                const data = await callAPI('getUserDetails', {
+                    targetUserId: userId
+                });
+                
+                if (data.success) {
+                    // แสดงข้อมูลผู้ใช้ใน modal
+                    showUserDetailsModal(data.user);
+                }
+            } catch (error) {
+                showMessage('error', 'ไม่สามารถโหลดข้อมูลได้', error.message);
             }
-            renderUsers();
+        }
+
+        async function searchUsersHandler() {
+            try {
+                const searchTerm = document.getElementById('userSearch').value;
+                const roleFilter = document.getElementById('userRoleFilter').value;
+                const statusFilter = document.getElementById('userStatusFilter').value;
+                
+                const data = await callAPI('searchUsers', {
+                    searchTerm: searchTerm,
+                    roleFilter: roleFilter,
+                    statusFilter: statusFilter
+                });
+                
+                if (data.success) {
+                    currentAdminData.filteredUsers = data.users;
+                    renderUsers();
+                    updateUserStats(currentAdminData.filteredUsers);
+                }
+            } catch (error) {
+                showMessage('error', 'ไม่สามารถค้นหาได้', error.message);
+            }
+        }
+
+        async function deleteUser(userId, userName) {
+            Swal.fire({
+                title: 'ยืนยันการลบผู้ใช้',
+                html: `คุณต้องการลบผู้ใช้ <b>${userName}</b> ใช่หรือไม่?<br><small>การลบนี้จะลบข้อมูลผู้ใช้ทั้งหมดและไม่สามารถกู้คืนได้</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ลบเลย',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('deleteUser', {
+                            targetUserId: userId
+                        });
+                        
+                        if (result.success) {
+                            showMessage('success', 'ลบผู้ใช้สำเร็จ', result.message);
+                            loadUsers(); // โหลดข้อมูลผู้ใช้ใหม่
+                        }
+                    } catch (error) {
+                        showMessage('error', 'ไม่สามารถลบผู้ใช้ได้', error.message);
+                    }
+                }
+            });
+        }
+
+        function updateUserStats(users) {
+            const totalUsers = users.length;
+            const regularUsers = users.filter(u => u.role === 'user').length;
+            const adminUsers = users.filter(u => u.role === 'admin').length;
+            const superadminUsers = users.filter(u => u.role === 'superadmin').length;
+            
+            document.getElementById('totalUsersCount').textContent = totalUsers;
+            document.getElementById('regularUsersCount').textContent = regularUsers;
+            document.getElementById('adminUsersCount').textContent = adminUsers;
+            document.getElementById('superadminUsersCount').textContent = superadminUsers;
+        }
+
+        function showUserDetailsModal(user) {
+            // สร้าง modal สำหรับแสดงรายละเอียดผู้ใช้
+            const modalHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
+                    <div class="dark-card p-6 w-full max-w-2xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold">รายละเอียดผู้ใช้</h3>
+                            <button onclick="closeUserDetailsModal()" class="text-gray-400 hover:text-white">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="md:col-span-1">
+                                <div class="text-center">
+                                    <img src="${user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`}" 
+                                         class="w-32 h-32 rounded-full mx-auto border-4 border-gray-700 mb-4">
+                                    <h4 class="text-lg font-bold">${user.displayName}</h4>
+                                    <p class="text-gray-400 text-sm">${user.lineId}</p>
+                                    <div class="mt-2">
+                                        <span class="${getRoleBadgeClass(user.role)}">
+                                            ${user.role === 'admin' ? 'แอดมิน' : 
+                                             user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-6 space-y-3">
+                                    <div>
+                                        <p class="text-sm text-gray-400">อีเมล</p>
+                                        <p class="font-medium">${user.email || 'ไม่มีอีเมล'}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-400">สถานะ</p>
+                                        <p class="font-medium ${user.status === 'active' ? 'text-green-400' : 'text-red-400'}">
+                                            ${user.status === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-400">วันที่สมัคร</p>
+                                        <p class="font-medium">${formatDate(user.createdAt)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="md:col-span-2">
+                                <h4 class="font-bold mb-4">สถิติการยืม</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                                    <div class="dark-card p-4 text-center border border-gray-800">
+                                        <p class="text-gray-400 text-sm">ยืมทั้งหมด</p>
+                                        <p class="text-2xl font-bold">${user.statistics.totalBorrowed || 0}</p>
+                                    </div>
+                                    <div class="dark-card p-4 text-center border border-gray-800">
+                                        <p class="text-gray-400 text-sm">คืนแล้ว</p>
+                                        <p class="text-2xl font-bold text-green-400">${user.statistics.totalReturned || 0}</p>
+                                    </div>
+                                    <div class="dark-card p-4 text-center border border-gray-800">
+                                        <p class="text-gray-400 text-sm">ค้างชำระ</p>
+                                        <p class="text-2xl font-bold ${user.statistics.totalOverdue > 0 ? 'text-red-400' : ''}">
+                                            ${user.statistics.totalOverdue || 0}
+                                        </p>
+                                    </div>
+                                    <div class="dark-card p-4 text-center border border-gray-800">
+                                        <p class="text-gray-400 text-sm">รออนุมัติ</p>
+                                        <p class="text-2xl font-bold text-yellow-400">${user.statistics.totalPending || 0}</p>
+                                    </div>
+                                    <div class="dark-card p-4 text-center border border-gray-800">
+                                        <p class="text-gray-400 text-sm">ถูกปฏิเสธ</p>
+                                        <p class="text-2xl font-bold text-red-400">${user.statistics.totalRejected || 0}</p>
+                                    </div>
+                                    <div class="dark-card p-4 text-center border border-gray-800">
+                                        <p class="text-gray-400 text-sm">กำลังยืม</p>
+                                        <p class="text-2xl font-bold text-blue-400">${user.statistics.activeBorrowings || 0}</p>
+                                    </div>
+                                </div>
+                                
+                                <h4 class="font-bold mb-4">รายการยืมล่าสุด</h4>
+                                <div class="max-h-60 overflow-y-auto scrollbar-thin">
+                                    ${user.recentBorrowings && user.recentBorrowings.length > 0 ? 
+                                        user.recentBorrowings.map(borrow => `
+                                            <div class="dark-card p-3 mb-2 border border-gray-800">
+                                                <div class="flex justify-between items-center">
+                                                    <div>
+                                                        <p class="font-medium">${borrow.itemName}</p>
+                                                        <p class="text-sm text-gray-400">${formatDate(borrow.borrowDate)}</p>
+                                                    </div>
+                                                    <span class="${getStatusClass(borrow.status)}">
+                                                        ${borrow.status === 'borrowed' ? 'กำลังยืม' : 
+                                                         borrow.status === 'returned' ? 'คืนแล้ว' : 
+                                                         borrow.status === 'pending' ? 'รออนุมัติ' : 
+                                                         borrow.status === 'rejected' ? 'ถูกปฏิเสธ' : borrow.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        `).join('') : 
+                                        '<p class="text-gray-500 text-center py-4">ไม่มีประวัติการยืม</p>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 mt-6">
+                            ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
+                                <button onclick="openRoleModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
+                                        class="btn-purple">
+                                    <i class="fas fa-user-shield mr-2"></i>เปลี่ยนบทบาท
+                                </button>
+                            ` : ''}
+                            
+                            ${currentUser.uid !== user.uid ? `
+                                <button onclick="openUserStatusModal(${JSON.stringify(user).replace(/"/g, '&quot;')})" 
+                                        class="btn-warning">
+                                    <i class="fas fa-user-cog mr-2"></i>เปลี่ยนสถานะ
+                                </button>
+                            ` : ''}
+                            
+                            ${currentUser.role === 'superadmin' && user.uid !== currentUser.uid ? `
+                                <button onclick="deleteUser('${user.uid}', '${user.displayName}')" 
+                                        class="btn-danger">
+                                    <i class="fas fa-trash mr-2"></i>ลบผู้ใช้
+                                </button>
+                            ` : ''}
+                            
+                            <button onclick="closeUserDetailsModal()" class="btn-primary">
+                                ปิด
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // เพิ่ม modal ไปยัง body
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'userDetailsModal';
+            modalDiv.innerHTML = modalHTML;
+            document.body.appendChild(modalDiv);
+        }
+
+        function closeUserDetailsModal() {
+            const modal = document.getElementById('userDetailsModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function getStatusClass(status) {
+            const statusClasses = {
+                'borrowed': 'status-borrowed',
+                'returned': 'status-returned',
+                'pending': 'status-pending',
+                'rejected': 'status-rejected',
+                'overdue': 'status-overdue'
+            };
+            return statusClasses[status] || 'status-badge';
         }
 
         function getRoleBadgeClass(role) {
