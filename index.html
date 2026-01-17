@@ -1244,7 +1244,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w-400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1437,7 +1437,7 @@
         }
 
         // =============================================
-        // LINE Bot Functions
+        // LINE Bot Functions - แก้ไขส่วนนี้
         // =============================================
         function checkTokenFormat() {
             const tokenInput = document.getElementById('channelAccessToken');
@@ -1566,8 +1566,10 @@
             }
         }
 
+        // แก้ไขฟังก์ชัน loadBotSettings ให้ดึงข้อมูลการตั้งค่าการแจ้งเตือนทั้งหมด
         async function loadBotSettings() {
             try {
+                showLoading();
                 const data = await callAPI('getBotSettings');
                 
                 if (data.success && data.settings) {
@@ -1576,6 +1578,7 @@
                     const botNameInput = document.getElementById('botNameInput');
                     const botPictureUrl = document.getElementById('botPictureUrl');
                     
+                    // แก้ไข: ดึงค่าจากเซิร์ฟเวอร์
                     const tokenValue = data.settings.channel_access_token?.value || '';
                     const secretValue = data.settings.channel_secret?.value || '';
                     
@@ -1587,26 +1590,57 @@
                     
                     document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
                     
-                    document.getElementById('notificationEnabled').checked = data.settings.notification_enabled?.value === 'true';
-                    document.getElementById('notifyOnRequest').checked = data.settings.notify_on_request?.value === 'true';
-                    document.getElementById('notifyOnApprove').checked = data.settings.notify_on_approve?.value === 'true';
-                    document.getElementById('notifyOnReject').checked = data.settings.notify_on_reject?.value === 'true';
-                    document.getElementById('notifyOnReturn').checked = data.settings.notify_on_return?.value === 'true';
-                    document.getElementById('notifyDueReminder').checked = data.settings.notify_due_reminder?.value === 'true';
-                    document.getElementById('notifyOverdue').checked = data.settings.notify_overdue?.value === 'true';
+                    // แก้ไข: โหลดการตั้งค่าการแจ้งเตือนทั้งหมด
+                    const notificationEnabled = document.getElementById('notificationEnabled');
+                    const notifyOnRequest = document.getElementById('notifyOnRequest');
+                    const notifyOnApprove = document.getElementById('notifyOnApprove');
+                    const notifyOnReject = document.getElementById('notifyOnReject');
+                    const notifyOnReturn = document.getElementById('notifyOnReturn');
+                    const notifyDueReminder = document.getElementById('notifyDueReminder');
+                    const notifyOverdue = document.getElementById('notifyOverdue');
                     
+                    // ตั้งค่า checked ตามค่าจากเซิร์ฟเวอร์ (ค่าเริ่มต้นเป็น true ถ้าไม่มีข้อมูล)
+                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
+                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
+                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
+                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
+                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
+                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
+                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
+                    
+                    // ถ้ามี token ให้ตรวจสอบรูปแบบและอัปเดตสถานะ
                     if (tokenValue.trim()) {
                         setTimeout(() => {
                             checkTokenFormat();
                         }, 500);
+                    } else {
+                        updateBotConnectionStatus({ status: 'not_configured' });
                     }
+                    
+                    hideLoading();
+                    showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
+                } else {
+                    hideLoading();
+                    showMessage('info', 'ยังไม่มีการตั้งค่า', 'กรุณาตั้งค่า LINE Bot ใหม่');
                 }
                 
             } catch (error) {
+                hideLoading();
+                console.error('Error loading bot settings:', error);
                 showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
+                
+                // แสดงค่าดีฟอลต์ถ้าโหลดไม่ได้
+                document.getElementById('notificationEnabled').checked = true;
+                document.getElementById('notifyOnRequest').checked = true;
+                document.getElementById('notifyOnApprove').checked = true;
+                document.getElementById('notifyOnReject').checked = true;
+                document.getElementById('notifyOnReturn').checked = true;
+                document.getElementById('notifyDueReminder').checked = true;
+                document.getElementById('notifyOverdue').checked = true;
             }
         }
 
+        // แก้ไขฟังก์ชัน saveBotSettings ให้บันทึกข้อมูลทั้งหมด
         async function saveBotSettings() {
             try {
                 const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
@@ -1642,6 +1676,7 @@
                     }
                 }
                 
+                // สร้างอ็อบเจ็กต์การตั้งค่าที่สมบูรณ์
                 const botSettings = {
                     channel_access_token: {
                         value: channelAccessToken,
@@ -1668,6 +1703,7 @@
                         description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
                         isActive: true
                     },
+                    // การตั้งค่าการแจ้งเตือนทั้งหมด
                     notification_enabled: {
                         value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
                         description: 'เปิดใช้งานการแจ้งเตือน',
@@ -1732,9 +1768,14 @@
                         });
                     }
                     
+                    // อัปเดตข้อมูลบอทอัตโนมัติหลังจากบันทึกสำเร็จ
                     setTimeout(() => {
                         autoDetectBotInfo();
                     }, 1000);
+                    
+                    // แสดงการแจ้งเตือน
+                    showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
+                    
                 } else {
                     throw new Error(result.message || 'ไม่สามารถบันทึกได้');
                 }
