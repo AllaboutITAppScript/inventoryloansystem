@@ -1039,7 +1039,7 @@
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" id="notifyOverdue" class="sr-only peer" checked>
                                             <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                    </label>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -1047,7 +1047,7 @@
                         
                         <!-- Action Buttons -->
                         <div class="flex justify-end space-x-3">
-                            <button onclick="loadBotSettings()" class="btn-danger">
+                            <button onclick="resetBotSettings()" class="btn-danger">
                                 <i class="fas fa-undo mr-2"></i>รีเซ็ต
                             </button>
                             <button onclick="saveBotSettings()" class="btn-success">
@@ -1244,7 +1244,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w-400&fit=crop&crop=faces'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1566,49 +1566,88 @@
             }
         }
 
-        // แก้ไขฟังก์ชัน loadBotSettings ให้ดึงข้อมูลการตั้งค่าการแจ้งเตือนทั้งหมด
         async function loadBotSettings() {
             try {
-                showLoading();
+                console.log('กำลังโหลดการตั้งค่า LINE Bot...');
                 const data = await callAPI('getBotSettings');
                 
                 if (data.success && data.settings) {
+                    console.log('โหลดการตั้งค่า LINE Bot สำเร็จ:', data.settings);
+                    
+                    // โหลดค่า settings พื้นฐาน
                     const channelAccessToken = document.getElementById('channelAccessToken');
                     const channelSecret = document.getElementById('channelSecret');
                     const botNameInput = document.getElementById('botNameInput');
                     const botPictureUrl = document.getElementById('botPictureUrl');
                     
-                    // แก้ไข: ดึงค่าจากเซิร์ฟเวอร์
-                    const tokenValue = data.settings.channel_access_token?.value || '';
-                    const secretValue = data.settings.channel_secret?.value || '';
+                    // ดึงค่าจาก data.settings โดยใช้ชื่อที่ถูกต้อง
+                    const tokenValue = data.settings.channel_access_token?.value || 
+                                      data.settings.channelAccessToken?.value || 
+                                      data.settings.channelAccessToken || '';
+                    const secretValue = data.settings.channel_secret?.value || 
+                                      data.settings.channelSecret?.value || 
+                                      data.settings.channelSecret || '';
                     
                     channelAccessToken.value = tokenValue;
                     channelSecret.value = secretValue;
                     
-                    botNameInput.value = data.settings.bot_name?.value || '';
-                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
+                    botNameInput.value = data.settings.bot_name?.value || 
+                                        data.settings.botName?.value || 
+                                        data.settings.botName || '';
+                    botPictureUrl.value = data.settings.bot_picture_url?.value || 
+                                         data.settings.botPictureUrl?.value || 
+                                         data.settings.botPictureUrl || '';
                     
-                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
+                    document.getElementById('adminNotifyGroup').value = 
+                        data.settings.admin_notify_group?.value || 
+                        data.settings.adminNotifyGroup?.value || 
+                        data.settings.adminNotifyGroup || '';
                     
-                    // แก้ไข: โหลดการตั้งค่าการแจ้งเตือนทั้งหมด
-                    const notificationEnabled = document.getElementById('notificationEnabled');
-                    const notifyOnRequest = document.getElementById('notifyOnRequest');
-                    const notifyOnApprove = document.getElementById('notifyOnApprove');
-                    const notifyOnReject = document.getElementById('notifyOnReject');
-                    const notifyOnReturn = document.getElementById('notifyOnReturn');
-                    const notifyDueReminder = document.getElementById('notifyDueReminder');
-                    const notifyOverdue = document.getElementById('notifyOverdue');
+                    // โหลดการตั้งค่าการแจ้งเตือน - ตรวจสอบทั้งรูปแบบเก่าและใหม่
+                    const loadCheckbox = (id, settingKey) => {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            // ตรวจสอบทั้งรูปแบบตัวแปรต่างๆ
+                            let value = data.settings[settingKey]?.value;
+                            if (value === undefined) {
+                                // ลองค้นหาชื่ออื่นๆ ที่อาจใช้
+                                const possibleKeys = [
+                                    settingKey,
+                                    settingKey.replace('notify', 'notification'),
+                                    settingKey.replace('_', ''),
+                                    settingKey.toLowerCase(),
+                                    settingKey.toUpperCase()
+                                ];
+                                
+                                for (const key of possibleKeys) {
+                                    if (data.settings[key]?.value !== undefined) {
+                                        value = data.settings[key].value;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // ถ้าไม่เจอในรูปแบบ object ให้ลองหาในรูปแบบ string โดยตรง
+                            if (value === undefined) {
+                                value = data.settings[settingKey];
+                            }
+                            
+                            element.checked = value === 'true' || value === true || value === '1' || value === 1;
+                        }
+                    };
                     
-                    // ตั้งค่า checked ตามค่าจากเซิร์ฟเวอร์ (ค่าเริ่มต้นเป็น true ถ้าไม่มีข้อมูล)
-                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
-                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
-                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
-                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
-                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
-                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
-                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
+                    // โหลดการตั้งค่าทั้งหมด
+                    loadCheckbox('notificationEnabled', 'notification_enabled');
+                    loadCheckbox('notifyOnRequest', 'notify_on_request');
+                    loadCheckbox('notifyOnApprove', 'notify_on_approve');
+                    loadCheckbox('notifyOnReject', 'notify_on_reject');
+                    loadCheckbox('notifyOnReturn', 'notify_on_return');
+                    loadCheckbox('notifyDueReminder', 'notify_due_reminder');
+                    loadCheckbox('notifyOverdue', 'notify_overdue');
                     
-                    // ถ้ามี token ให้ตรวจสอบรูปแบบและอัปเดตสถานะ
+                    console.log('โหลดการตั้งค่าการแจ้งเตือนเสร็จสิ้น');
+                    
+                    // อัปเดตสถานะการเชื่อมต่อถ้ามี token
                     if (tokenValue.trim()) {
                         setTimeout(() => {
                             checkTokenFormat();
@@ -1616,31 +1655,18 @@
                     } else {
                         updateBotConnectionStatus({ status: 'not_configured' });
                     }
-                    
-                    hideLoading();
-                    showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
                 } else {
-                    hideLoading();
-                    showMessage('info', 'ยังไม่มีการตั้งค่า', 'กรุณาตั้งค่า LINE Bot ใหม่');
+                    console.log('ไม่พบการตั้งค่า LINE Bot ใช้ค่าเริ่มต้น');
+                    updateBotConnectionStatus({ status: 'not_configured' });
                 }
                 
             } catch (error) {
-                hideLoading();
                 console.error('Error loading bot settings:', error);
                 showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
-                
-                // แสดงค่าดีฟอลต์ถ้าโหลดไม่ได้
-                document.getElementById('notificationEnabled').checked = true;
-                document.getElementById('notifyOnRequest').checked = true;
-                document.getElementById('notifyOnApprove').checked = true;
-                document.getElementById('notifyOnReject').checked = true;
-                document.getElementById('notifyOnReturn').checked = true;
-                document.getElementById('notifyDueReminder').checked = true;
-                document.getElementById('notifyOverdue').checked = true;
+                updateBotConnectionStatus({ status: 'connection_failed', message: 'ไม่สามารถโหลดการตั้งค่า' });
             }
         }
 
-        // แก้ไขฟังก์ชัน saveBotSettings ให้บันทึกข้อมูลทั้งหมด
         async function saveBotSettings() {
             try {
                 const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
@@ -1676,70 +1702,83 @@
                     }
                 }
                 
-                // สร้างอ็อบเจ็กต์การตั้งค่าที่สมบูรณ์
+                // เตรียมข้อมูลการตั้งค่าทั้งหมด
                 const botSettings = {
                     channel_access_token: {
                         value: channelAccessToken,
                         description: 'Channel Access Token สำหรับ LINE Messaging API',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     channel_secret: {
                         value: document.getElementById('channelSecret').value.trim(),
                         description: 'Channel Secret สำหรับ LINE Messaging API',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     bot_name: {
                         value: document.getElementById('botNameInput').value.trim(),
                         description: 'ชื่อของบอทที่แสดงใน LINE',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     bot_picture_url: {
                         value: document.getElementById('botPictureUrl').value.trim(),
                         description: 'URL รูปภาพโปรไฟล์บอท',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     admin_notify_group: {
                         value: document.getElementById('adminNotifyGroup').value.trim(),
                         description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
-                        isActive: true
+                        isActive: document.getElementById('adminNotifyGroup').value.trim() !== '',
+                        lastUpdated: new Date().toISOString()
                     },
-                    // การตั้งค่าการแจ้งเตือนทั้งหมด
                     notification_enabled: {
                         value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
                         description: 'เปิดใช้งานการแจ้งเตือน',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     notify_on_request: {
                         value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     notify_on_approve: {
                         value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     notify_on_reject: {
                         value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     notify_on_return: {
                         value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อมีการคืนของ',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     notify_due_reminder: {
                         value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     },
                     notify_overdue: {
                         value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
-                        isActive: true
+                        isActive: true,
+                        lastUpdated: new Date().toISOString()
                     }
                 };
+                
+                console.log('กำลังบันทึกการตั้งค่า LINE Bot:', botSettings);
                 
                 showLoading();
                 
@@ -1750,6 +1789,8 @@
                 hideLoading();
                 
                 if (result.success) {
+                    console.log('บันทึกการตั้งค่า LINE Bot สำเร็จ:', result);
+                    
                     await Swal.fire({
                         icon: 'success',
                         title: 'บันทึกสำเร็จ',
@@ -1764,20 +1805,25 @@
                         const botName = botSettings.bot_name.value || 'LINE Bot';
                         updateBotConnectionStatus({
                             status: 'connected',
-                            botName: botName
+                            botName: botName,
+                            message: 'บันทึกการตั้งค่าเรียบร้อย'
                         });
                     }
                     
-                    // อัปเดตข้อมูลบอทอัตโนมัติหลังจากบันทึกสำเร็จ
+                    // โหลดการตั้งค่าอีกครั้งเพื่อตรวจสอบ
                     setTimeout(() => {
-                        autoDetectBotInfo();
+                        loadBotSettings();
                     }, 1000);
                     
-                    // แสดงการแจ้งเตือน
-                    showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
+                    // พยายามดึงข้อมูลบอทอัตโนมัติ
+                    setTimeout(() => {
+                        if (checkTokenFormat()) {
+                            autoDetectBotInfo();
+                        }
+                    }, 1500);
                     
                 } else {
-                    throw new Error(result.message || 'ไม่สามารถบันทึกได้');
+                    throw new Error(result.message || result.error || 'ไม่สามารถบันทึกได้');
                 }
                 
             } catch (error) {
@@ -1862,15 +1908,20 @@
                 case 'connected':
                     statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
                     statusText.textContent = 'เชื่อมต่อแล้ว: ' + (status.botName || 'LINE Bot');
+                    if (status.message) {
+                        statusText.textContent += ' - ' + status.message;
+                    }
                     connectionStatusDiv.querySelector('div').classList.add('bot-status-connected');
                     connectionStatusDiv.querySelector('div').classList.remove('bot-status-disconnected');
                     botInfoCard.classList.remove('hidden');
                     
-                    updateBotInfo({
-                        displayName: status.botName,
-                        pictureUrl: status.pictureUrl,
-                        statusMessage: status.statusMessage
-                    });
+                    if (status.botName || status.pictureUrl || status.statusMessage) {
+                        updateBotInfo({
+                            displayName: status.botName,
+                            pictureUrl: status.pictureUrl,
+                            statusMessage: status.statusMessage
+                        });
+                    }
                     break;
                     
                 case 'not_configured':
@@ -1941,6 +1992,42 @@
                     botPictureUrl.classList.remove('auto-fill-success');
                 }, 1500);
             }
+        }
+
+        // เพิ่มฟังก์ชันรีเซ็ตการตั้งค่า
+        function resetBotSettings() {
+            Swal.fire({
+                title: 'รีเซ็ตการตั้งค่า?',
+                text: 'คุณต้องการรีเซ็ตการตั้งค่า LINE Bot ทั้งหมดใช่หรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, รีเซ็ตเลย',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // รีเซ็ตฟอร์ม
+                    document.getElementById('channelAccessToken').value = '';
+                    document.getElementById('channelSecret').value = '';
+                    document.getElementById('botNameInput').value = '';
+                    document.getElementById('botPictureUrl').value = '';
+                    document.getElementById('adminNotifyGroup').value = '';
+                    
+                    // รีเซ็ตการตั้งค่าการแจ้งเตือนเป็นค่าเริ่มต้น
+                    document.getElementById('notificationEnabled').checked = true;
+                    document.getElementById('notifyOnRequest').checked = true;
+                    document.getElementById('notifyOnApprove').checked = true;
+                    document.getElementById('notifyOnReject').checked = true;
+                    document.getElementById('notifyOnReturn').checked = true;
+                    document.getElementById('notifyDueReminder').checked = true;
+                    document.getElementById('notifyOverdue').checked = true;
+                    
+                    updateBotConnectionStatus({ status: 'not_configured' });
+                    
+                    showMessage('success', 'รีเซ็ตสำเร็จ', 'รีเซ็ตการตั้งค่า LINE Bot เรียบร้อยแล้ว');
+                }
+            });
         }
 
         // =============================================
@@ -3450,6 +3537,7 @@
                         currentUser = result.user;
                         updateUserUI(currentUser);
                         loadSettings();
+                        setupBotSettingsDefaults();
                     }
                     
                     hideLoading();
@@ -3458,6 +3546,28 @@
             } catch (error) {
                 console.error('App Initialization Error:', error);
             }
+        }
+
+        function setupBotSettingsDefaults() {
+            const checkboxes = [
+                'notificationEnabled',
+                'notifyOnRequest',
+                'notifyOnApprove',
+                'notifyOnReject',
+                'notifyOnReturn',
+                'notifyDueReminder',
+                'notifyOverdue'
+            ];
+            
+            checkboxes.forEach(id => {
+                const element = document.getElementById(id);
+                if (element && element.type === 'checkbox') {
+                    if (!element.hasAttribute('data-initialized')) {
+                        element.checked = true;
+                        element.setAttribute('data-initialized', 'true');
+                    }
+                }
+            });
         }
 
         // Close notifications when clicking outside
