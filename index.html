@@ -1443,7 +1443,7 @@
         }
 
         // =============================================
-        // LINE Bot Functions (แก้ไขแล้ว)
+        // LINE Bot Functions - แก้ไขให้สมบูรณ์
         // =============================================
         function checkTokenFormat() {
             const tokenInput = document.getElementById('channelAccessToken');
@@ -1459,18 +1459,13 @@
                 return false;
             }
             
-            // ตรวจสอบรูปแบบ token ที่ยอมรับได้ทั้งหมด
-            // LINE Token สามารถเป็นได้หลายรูปแบบ:
-            // 1. "Bearer U1234567890abcdef..." (รูปแบบมาตรฐานใหม่)
-            // 2. "U1234567890abcdef..." (Bearer อาจไม่มี)
-            // 3. "R1234567890abcdef..." (สำหรับ Refresh Token)
-            // 4. "1234567890abcdef..." (บางครั้งมีเฉพาะตัวเลขและตัวอักษร)
-            
-            // แก้ไขเงื่อนไขการตรวจสอบให้ยืดหยุ่นมากขึ้น
-            const isValidFormat = token.startsWith('Bearer ') || 
-                                token.startsWith('U') ||
-                                token.startsWith('R') ||
-                                /^[a-zA-Z0-9]{30,}$/.test(token);
+            // ตรวจสอบรูปแบบ token แบบง่ายๆ
+            // LINE Token มักจะเป็นยาวๆ ประกอบด้วยตัวอักษรและตัวเลข
+            const isValidFormat = token.length >= 30 && 
+                                 /^[a-zA-Z0-9]+$/.test(token) || 
+                                 token.startsWith('Bearer ') ||
+                                 token.startsWith('U') ||
+                                 token.startsWith('R');
             
             if (isValidFormat) {
                 tokenInput.classList.add('token-valid');
@@ -1478,7 +1473,7 @@
                 tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
                 tokenStatus.classList.remove('hidden');
                 
-                // รอ 1 วินาทีแล้วดึงข้อมูลบอทอัตโนมัติ (debounce)
+                // รอ 1 วินาทีแล้วดึงข้อมูลบอทอัตโนมัติ
                 debounceTimer = setTimeout(() => {
                     autoDetectBotInfo();
                 }, 1000);
@@ -1513,18 +1508,26 @@
                     message: 'กำลังดึงข้อมูลบอท...'
                 });
                 
-                // ตรวจสอบว่า Token มีคำว่า "Bearer" หรือไม่ ถ้าไม่มีให้เติมเอง
+                // สร้าง Token สำหรับส่ง (เติม Bearer ถ้ายังไม่มี)
                 let formattedToken = channelAccessToken;
                 if (!channelAccessToken.startsWith('Bearer ')) {
-                    // เติม Bearer ถ้ายังไม่มี
                     formattedToken = `Bearer ${channelAccessToken}`;
                 }
                 
                 // เรียก API เพื่อดึงข้อมูลบอท
                 showLoading();
-                const result = await callAPI('getBotProfile', {
-                    channelAccessToken: formattedToken
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'getBotProfile',
+                        channelAccessToken: formattedToken
+                    })
                 });
+                
+                const result = await response.json();
                 hideLoading();
                 
                 if (result.success && result.botInfo) {
@@ -1571,21 +1574,13 @@
                     // แสดงข้อความว่าบอทอาจไม่มีสิทธิ์ในการเรียก API บางอย่าง
                     showMessage('warning', 'ไม่สามารถดึงข้อมูลบางส่วนได้', 'บอทของคุณอาจไม่มีสิทธิ์ในการดึงข้อมูลโปรไฟล์');
                     
-                    // ยังคงดึงข้อมูลเบื้องต้นตามที่ผู้ใช้กรอก
-                    const botNameInput = document.getElementById('botNameInput');
-                    const botPictureUrl = document.getElementById('botPictureUrl');
-                    
-                    // ถ้ายังไม่มีข้อมูล ให้ใช้ชื่อจาก Channel Secret ถ้ามี
-                    const channelSecret = document.getElementById('channelSecret').value.trim();
-                    if (channelSecret && !botNameInput.value.trim()) {
-                        botNameInput.value = `LINE Bot ${channelSecret.substring(0, 8)}`;
+                    // ถ้า API ส่งข้อความกลับมา แสดงว่าเชื่อมต่อได้แต่ดึงข้อมูลไม่สมบูรณ์
+                    if (result.message) {
+                        updateBotConnectionStatus({
+                            status: 'connected',
+                            botName: 'LINE Bot'
+                        });
                     }
-                    
-                    // อัพเดตสถานะว่าสามารถเชื่อมต่อได้แม้จะดึงข้อมูลไม่สมบูรณ์
-                    updateBotConnectionStatus({
-                        status: 'connected',
-                        botName: botNameInput.value || 'LINE Bot'
-                    });
                 }
                 
             } catch (error) {
@@ -1655,30 +1650,6 @@
                         color: '#e2e8f0'
                     });
                     return;
-                }
-                
-                // ตรวจสอบรูปแบบ token ที่ผ่อนปรนมากขึ้น
-                if (!channelAccessToken.startsWith('Bearer ') && 
-                    !channelAccessToken.startsWith('U') && 
-                    !channelAccessToken.startsWith('R') &&
-                    channelAccessToken.length < 30) {
-                    
-                    const { value: confirm } = await Swal.fire({
-                        icon: 'question',
-                        title: 'รูปแบบ Token อาจไม่ถูกต้อง',
-                        html: `Channel Access Token ของคุณดูเหมือนจะไม่ใช่รูปแบบมาตรฐาน<br>
-                              <small>รูปแบบมาตรฐานควรขึ้นต้นด้วย "Bearer ", "U" หรือ "R" และมีความยาวอย่างน้อย 30 ตัวอักษร</small>`,
-                        showCancelButton: true,
-                        confirmButtonText: 'ใช้ตามนี้',
-                        cancelButtonText: 'แก้ไข',
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    if (!confirm) {
-                        document.getElementById('channelAccessToken').focus();
-                        return;
-                    }
                 }
                 
                 const botSettings = {
@@ -3133,13 +3104,27 @@
         }
 
         // =============================================
-        // User Detail Functions (เพิ่มใหม่)
+        // User Detail Functions - แก้ไขให้ทำงานได้จริง
         // =============================================
         async function loadUserDetails(userId) {
             try {
-                const result = await callAPI('getUserDetails', {
-                    targetUid: userId
+                showLoading();
+                
+                // เรียก API เพื่อดึงข้อมูลผู้ใช้
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'getUserDetails',
+                        targetUid: userId,
+                        uid: currentUser?.uid || ''
+                    })
                 });
+                
+                const result = await response.json();
+                hideLoading();
                 
                 if (result.success && result.userDetails) {
                     const user = result.userDetails;
@@ -3224,8 +3209,11 @@
                     `;
                     
                     document.getElementById('userDetailModal').classList.remove('hidden');
+                } else {
+                    showMessage('error', 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้', result.message || 'เกิดข้อผิดพลาด');
                 }
             } catch (error) {
+                hideLoading();
                 showMessage('error', 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้', error.message);
             }
         }
