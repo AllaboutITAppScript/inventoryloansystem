@@ -1242,9 +1242,9 @@
         // Configuration
         // =============================================
         const CONFIG = {
-            LIFF_ID: '2008904120-hDgwl23w',
-            API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w-400&fit-crop&crop-faces'
+            LIFF_ID: '2008904120-hDgwl23w', // แทนที่ด้วย LIFF ID ของคุณ
+            API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec', // แทนที่ด้วย URL ของคุณ
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1450,31 +1450,12 @@
                 return false;
             }
             
-            // ตรวจสอบรูปแบบ token ที่ยอมรับได้ทั้งหมด
-            // LINE Token สามารถเป็นได้หลายรูปแบบ:
-            // 1. "Bearer U1234567890abcdef..." (รูปแบบมาตรฐานใหม่)
-            // 2. "U1234567890abcdef..." (Bearer อาจไม่มี)
-            // 3. "R1234567890abcdef..." (สำหรับ Refresh Token)
-            // 4. "1234567890abcdef..." (บางครั้งมีเฉพาะตัวเลขและตัวอักษร)
-            
-            // เพิ่มการตรวจสอบที่ยืดหยุ่นมากขึ้น
+            // ตรวจสอบรูปแบบ token - ยืดหยุ่นมากขึ้น
             let isValidFormat = false;
             
-            // ตรวจสอบความยาวขั้นต่ำ (LINE token มักมีความยาวมากกว่า 30 ตัวอักษร)
+            // ตรวจสอบความยาวขั้นต่ำ
             if (token.length >= 30) {
-                // ตรวจสอบรูปแบบต่างๆ
-                if (token.startsWith('Bearer ')) {
-                    // ถ้ามี Bearer ให้ตรวจสอบส่วนหลัง
-                    const tokenWithoutBearer = token.substring(7).trim();
-                    isValidFormat = /^[UR][a-zA-Z0-9]{30,}$/.test(tokenWithoutBearer) || 
-                                   /^[a-zA-Z0-9]{30,}$/.test(tokenWithoutBearer);
-                } else if (token.startsWith('U') || token.startsWith('R')) {
-                    // ถ้าขึ้นต้นด้วย U หรือ R
-                    isValidFormat = /^[UR][a-zA-Z0-9]{30,}$/.test(token);
-                } else {
-                    // รูปแบบอื่นๆ (อาจเป็น token เก่า)
-                    isValidFormat = /^[a-zA-Z0-9]{30,}$/.test(token);
-                }
+                isValidFormat = true; // ยอมรับทุกรูปแบบที่มีความยาวพอสมควร
             }
             
             if (isValidFormat) {
@@ -1518,16 +1499,9 @@
                     message: 'กำลังดึงข้อมูลบอท...'
                 });
                 
-                // ตรวจสอบว่า Token มีคำว่า "Bearer" หรือไม่ ถ้าไม่มีให้เติมเอง
-                let formattedToken = channelAccessToken;
-                if (!channelAccessToken.startsWith('Bearer ')) {
-                    // ถ้าไม่มีคำว่า Bearer ให้เติม
-                    formattedToken = `Bearer ${channelAccessToken}`;
-                }
-                
                 // เรียก API เพื่อดึงข้อมูลบอท
                 const result = await callAPI('getBotProfile', {
-                    channelAccessToken: formattedToken
+                    channelAccessToken: channelAccessToken
                 });
                 
                 if (result.success && result.botInfo) {
@@ -1615,8 +1589,11 @@
                     
                     channelAccessToken.value = tokenValue;
                     channelSecret.value = secretValue;
+                    
+                    // ตั้งค่าชื่อบอทและรูปภาพเป็น readonly
                     botNameInput.value = data.settings.bot_name?.value || '';
                     botPictureUrl.value = data.settings.bot_picture_url?.value || '';
+                    
                     document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
                     
                     // ตั้งค่า toggle switches
@@ -1779,9 +1756,7 @@
                     return;
                 }
                 
-                const result = await callAPI('testBotConnection', {
-                    channelAccessToken: channelAccessToken
-                });
+                const result = await callAPI('testBotConnection');
                 
                 hideLoading();
                 
@@ -3151,7 +3126,7 @@
         async function loadUserDetails(userId) {
             try {
                 const result = await callAPI('getUserDetails', {
-                    userId: userId
+                    targetUserId: userId
                 });
                 
                 if (result.success && result.user) {
@@ -3188,28 +3163,28 @@
                             <div class="dark-card p-4 border border-gray-800">
                                 <div class="text-center">
                                     <p class="text-gray-400 text-sm">ยืมทั้งหมด</p>
-                                    <p class="text-3xl font-bold mt-1">${user.totalBorrowed || 0} ครั้ง</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalBorrowed || 0} ครั้ง</p>
                                 </div>
                             </div>
                             
                             <div class="dark-card p-4 border border-gray-800">
                                 <div class="text-center">
                                     <p class="text-gray-400 text-sm">คืนแล้ว</p>
-                                    <p class="text-3xl font-bold mt-1">${user.totalReturned || 0} ครั้ง</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalReturned || 0} ครั้ง</p>
                                 </div>
                             </div>
                             
                             <div class="dark-card p-4 border border-gray-800">
                                 <div class="text-center">
                                     <p class="text-gray-400 text-sm">ค้างคืน</p>
-                                    <p class="text-3xl font-bold mt-1">${user.totalOverdue || 0} ครั้ง</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalOverdue || 0} ครั้ง</p>
                                 </div>
                             </div>
                             
                             <div class="dark-card p-4 border border-gray-800">
                                 <div class="text-center">
                                     <p class="text-gray-400 text-sm">ค้างชำระ</p>
-                                    <p class="text-3xl font-bold mt-1">${user.totalFines || 0} บาท</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalRejected || 0} ครั้ง</p>
                                 </div>
                             </div>
                             
@@ -3227,7 +3202,7 @@
                                     </div>
                                     <div>
                                         <p class="text-gray-400 text-sm">อัปเดตล่าสุด</p>
-                                        <p class="font-medium">${formatDate(user.updatedAt)}</p>
+                                        <p class="font-medium">${formatDate(user.createdAt)}</p>
                                     </div>
                                     <div>
                                         <p class="text-gray-400 text-sm">LINE ID</p>
