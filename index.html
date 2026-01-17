@@ -1242,8 +1242,8 @@
         // Configuration
         // =============================================
         const CONFIG = {
-            LIFF_ID: '2008904120-hDgwl23w', // แทนที่ด้วย LIFF ID ของคุณ
-            API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec', // แทนที่ด้วย URL ของคุณ
+            LIFF_ID: '2008904120-hDgwl23w',
+            API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
             DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
@@ -1262,7 +1262,7 @@
         let settings = {};
         let editItemId = null;
         let currentBotInfo = null;
-        let debounceTimer;
+        let debounceTimer = null;
 
         // =============================================
         // Utility Functions
@@ -1364,9 +1364,11 @@
                 </div>
             `;
 
-            document.getElementById('notificationArea').appendChild(notification);
-            document.getElementById('notificationArea').style.display = 'block';
+            const notificationArea = document.getElementById('notificationArea');
+            notificationArea.appendChild(notification);
+            notificationArea.style.display = 'block';
 
+            // อัตโนมัติลบหลังจาก 5 วินาที
             setTimeout(() => {
                 removeNotification(notificationId);
             }, 5000);
@@ -1376,8 +1378,9 @@
             const element = document.getElementById(id);
             if (element) {
                 element.remove();
-                if (document.getElementById('notificationArea').children.length === 0) {
-                    document.getElementById('notificationArea').style.display = 'none';
+                const notificationArea = document.getElementById('notificationArea');
+                if (notificationArea.children.length === 0) {
+                    notificationArea.style.display = 'none';
                 }
             }
         }
@@ -1434,14 +1437,16 @@
         }
 
         // =============================================
-        // LINE Bot Functions (แก้ไขแล้ว)
+        // LINE Bot Functions
         // =============================================
         function checkTokenFormat() {
             const tokenInput = document.getElementById('channelAccessToken');
             const token = tokenInput.value.trim();
             const tokenStatus = document.getElementById('tokenStatus');
             
-            clearTimeout(debounceTimer);
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
             
             if (!token) {
                 tokenInput.classList.remove('token-valid', 'token-invalid');
@@ -1450,12 +1455,11 @@
                 return false;
             }
             
-            // ตรวจสอบรูปแบบ token - ยืดหยุ่นมากขึ้น
             let isValidFormat = false;
             
             // ตรวจสอบความยาวขั้นต่ำ
             if (token.length >= 30) {
-                isValidFormat = true; // ยอมรับทุกรูปแบบที่มีความยาวพอสมควร
+                isValidFormat = true;
             }
             
             if (isValidFormat) {
@@ -1464,7 +1468,7 @@
                 tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
                 tokenStatus.classList.remove('hidden');
                 
-                // รอ 1.5 วินาทีแล้วดึงข้อมูลบอทอัตโนมัติ (debounce)
+                // รอ 1.5 วินาทีแล้วดึงข้อมูลบอทอัตโนมัติ
                 debounceTimer = setTimeout(() => {
                     autoDetectBotInfo();
                 }, 1500);
@@ -1486,20 +1490,17 @@
         async function autoDetectBotInfo() {
             const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
             
-            // ตรวจสอบว่ามี Token หรือไม่
             if (!channelAccessToken) {
                 showMessage('warning', 'กรุณากรอก Channel Access Token', 'ต้องมี Token ในการดึงข้อมูลบอท');
                 return;
             }
             
             try {
-                // แสดงสถานะกำลังตรวจสอบ
                 updateBotConnectionStatus({
                     status: 'checking',
                     message: 'กำลังดึงข้อมูลบอท...'
                 });
                 
-                // เรียก API เพื่อดึงข้อมูลบอท
                 const result = await callAPI('getBotProfile', {
                     channelAccessToken: channelAccessToken
                 });
@@ -1508,7 +1509,6 @@
                     const botInfo = result.botInfo;
                     currentBotInfo = botInfo;
                     
-                    // เติมข้อมูลลงในฟิลด์ (แบบ readonly)
                     const botNameInput = document.getElementById('botNameInput');
                     const botPictureUrl = document.getElementById('botPictureUrl');
                     
@@ -1528,7 +1528,6 @@
                         }, 1500);
                     }
                     
-                    // อัพเดตการแสดงผล
                     updateBotConnectionStatus({
                         status: 'connected',
                         botName: botInfo.displayName,
@@ -1536,7 +1535,6 @@
                         statusMessage: botInfo.statusMessage || 'ระบบยืมคืนออนไลน์'
                     });
                     
-                    // แสดงการแจ้งเตือน
                     showNotification('success', 'ดึงข้อมูลบอทสำเร็จ', 'ระบบได้ดึงข้อมูลบอทอัตโนมัติแล้ว');
                     
                 } else {
@@ -1545,16 +1543,12 @@
                         message: result.message || 'ไม่สามารถดึงข้อมูลบอทได้'
                     });
                     
-                    // ยังคงดึงข้อมูลเบื้องต้นตามที่ผู้ใช้กรอก
                     const botNameInput = document.getElementById('botNameInput');
-                    
-                    // ถ้ายังไม่มีข้อมูล ให้ใช้ชื่อจาก Channel Secret ถ้ามี
                     const channelSecret = document.getElementById('channelSecret').value.trim();
                     if (channelSecret && !botNameInput.value.trim()) {
                         botNameInput.value = `LINE Bot ${channelSecret.substring(0, 8)}`;
                     }
                     
-                    // อัพเดตสถานะว่าสามารถเชื่อมต่อได้แม้จะดึงข้อมูลไม่สมบูรณ์
                     updateBotConnectionStatus({
                         status: 'connected',
                         botName: botNameInput.value || 'LINE Bot'
@@ -1568,7 +1562,6 @@
                     message: 'เกิดข้อผิดพลาดในการดึงข้อมูล'
                 });
                 
-                // แสดงข้อความว่าการดึงข้อมูลล้มเหลวแต่ยังสามารถใช้งานได้
                 showMessage('error', 'ไม่สามารถดึงข้อมูลบอทอัตโนมัติ', 'คุณยังสามารถกรอกข้อมูลบอทด้วยตนเองได้');
             }
         }
@@ -1583,20 +1576,17 @@
                     const botNameInput = document.getElementById('botNameInput');
                     const botPictureUrl = document.getElementById('botPictureUrl');
                     
-                    // เติมค่าจากการตั้งค่า
                     const tokenValue = data.settings.channel_access_token?.value || '';
                     const secretValue = data.settings.channel_secret?.value || '';
                     
                     channelAccessToken.value = tokenValue;
                     channelSecret.value = secretValue;
                     
-                    // ตั้งค่าชื่อบอทและรูปภาพเป็น readonly
                     botNameInput.value = data.settings.bot_name?.value || '';
                     botPictureUrl.value = data.settings.bot_picture_url?.value || '';
                     
                     document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
                     
-                    // ตั้งค่า toggle switches
                     document.getElementById('notificationEnabled').checked = data.settings.notification_enabled?.value === 'true';
                     document.getElementById('notifyOnRequest').checked = data.settings.notify_on_request?.value === 'true';
                     document.getElementById('notifyOnApprove').checked = data.settings.notify_on_approve?.value === 'true';
@@ -1605,7 +1595,6 @@
                     document.getElementById('notifyDueReminder').checked = data.settings.notify_due_reminder?.value === 'true';
                     document.getElementById('notifyOverdue').checked = data.settings.notify_overdue?.value === 'true';
                     
-                    // ตรวจสอบ token และดึงข้อมูลหากมี
                     if (tokenValue.trim()) {
                         setTimeout(() => {
                             checkTokenFormat();
@@ -1623,7 +1612,7 @@
                 const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
                 
                 if (!channelAccessToken) {
-                    Swal.fire({
+                    await Swal.fire({
                         icon: 'warning',
                         title: 'กรุณากรอก Channel Access Token',
                         text: 'ต้องมี Channel Access Token เพื่อใช้งาน LINE Bot',
@@ -1634,7 +1623,6 @@
                     return;
                 }
                 
-                // ตรวจสอบรูปแบบ token ที่ผ่อนปรนมากขึ้น
                 if (channelAccessToken.length < 30) {
                     const { value: confirm } = await Swal.fire({
                         icon: 'question',
@@ -1717,14 +1705,25 @@
                     }
                 };
                 
+                showLoading();
+                
                 const result = await callAPI('updateBotSettings', {
                     settings: JSON.stringify(botSettings)
                 });
                 
+                hideLoading();
+                
                 if (result.success) {
-                    showMessage('success', 'บันทึกสำเร็จ', 'บันทึกการตั้งค่า LINE Bot สำเร็จ!');
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ',
+                        text: 'บันทึกการตั้งค่า LINE Bot สำเร็จ!',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
                     
-                    // อัพเดตสถานะการเชื่อมต่อ
                     if (channelAccessToken) {
                         const botName = botSettings.bot_name.value || 'LINE Bot';
                         updateBotConnectionStatus({
@@ -1733,14 +1732,25 @@
                         });
                     }
                     
-                    // ดึงข้อมูลบอทอีกครั้งเพื่ออัพเดตข้อมูลให้สมบูรณ์
                     setTimeout(() => {
                         autoDetectBotInfo();
                     }, 1000);
+                } else {
+                    throw new Error(result.message || 'ไม่สามารถบันทึกได้');
                 }
                 
             } catch (error) {
-                showMessage('error', 'ไม่สามารถบันทึกได้', error.message);
+                hideLoading();
+                console.error('Error saving bot settings:', error);
+                
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถบันทึกได้',
+                    html: `เกิดข้อผิดพลาดในการบันทึก: <br><small>${error.message}</small>`,
+                    confirmButtonText: 'ตกลง',
+                    background: '#1e293b',
+                    color: '#e2e8f0'
+                });
             }
         }
 
@@ -1766,11 +1776,9 @@
                     if (testResult.success) {
                         const botName = result.botName || testResult.botInfo?.displayName || 'LINE Bot';
                         
-                        // อัพเดตข้อมูลในฟอร์ม
                         const botNameInput = document.getElementById('botNameInput');
                         const botPictureUrl = document.getElementById('botPictureUrl');
                         
-                        // เติมข้อมูลถ้ายังว่างอยู่
                         if (!botNameInput.value.trim() && testResult.botInfo?.displayName) {
                             botNameInput.value = testResult.botInfo.displayName;
                         }
@@ -1779,7 +1787,6 @@
                             botPictureUrl.value = testResult.botInfo.pictureUrl;
                         }
                         
-                        // อัพเดตข้อมูลการแสดงผล
                         updateBotInfo(testResult.botInfo);
                         
                         showMessage('success', 'ทดสอบสำเร็จ', `เชื่อมต่อกับ LINE Bot "${botName}" สำเร็จ!`);
@@ -1818,7 +1825,6 @@
                     connectionStatusDiv.querySelector('div').classList.remove('bot-status-disconnected');
                     botInfoCard.classList.remove('hidden');
                     
-                    // อัพเดตข้อมูลบอท
                     updateBotInfo({
                         displayName: status.botName,
                         pictureUrl: status.pictureUrl,
@@ -1857,11 +1863,9 @@
             const botStatusMessage = document.getElementById('botStatusMessage');
             const botLastTested = document.getElementById('botLastTested');
             
-            // ตั้งค่ารูปภาพ
             if (info.pictureUrl) {
                 botPicture.src = info.pictureUrl;
             } else if (info.displayName) {
-                // ถ้าไม่มีรูป ให้ใช้ avatar ตามชื่อ
                 const displayName = info.displayName || 'Bot';
                 botPicture.src = 'https://ui-avatars.com/api/?name=' + 
                     encodeURIComponent(displayName) + 
@@ -1876,10 +1880,8 @@
                 botStatusMessage.textContent = info.statusMessage;
             }
             
-            // อัพเดตเวลาทดสอบล่าสุด
             botLastTested.textContent = 'อัพเดตล่าสุด: ' + formatTime(new Date());
             
-            // อัพเดตข้อมูลในฟอร์ม
             const botNameInput = document.getElementById('botNameInput');
             const botPictureUrl = document.getElementById('botPictureUrl');
             
@@ -1913,6 +1915,8 @@
                     ...data
                 });
                 
+                console.log('Calling API:', action, data);
+                
                 const response = await fetch(CONFIG.API_URL, {
                     method: 'POST',
                     headers: {
@@ -1920,6 +1924,10 @@
                     },
                     body: params
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
                 const result = await response.json();
                 
@@ -1933,7 +1941,16 @@
                 
             } catch (error) {
                 hideLoading();
-                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
+                console.error('API Call Error:', error);
+                
+                let errorMessage = error.message;
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+                } else if (error.message.includes('HTTP error')) {
+                    errorMessage = 'เซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้งในภายหลัง';
+                }
+                
+                showMessage('error', 'เกิดข้อผิดพลาด', errorMessage);
                 throw error;
             }
         }
@@ -3121,7 +3138,7 @@
         }
 
         // =============================================
-        // User Details Functions (แก้ไขแล้ว)
+        // User Details Functions
         // =============================================
         async function loadUserDetails(userId) {
             try {
