@@ -320,22 +320,6 @@
             border-radius: 8px;
             border: 2px solid rgba(255, 255, 255, 0.1);
         }
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .upload-area:hover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
-        }
-        .upload-area.dragover {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -1253,32 +1237,20 @@
                     </div>
                 </div>
                 
-                <!-- Image Upload Section -->
+                <!-- Image URL Input (แทนที่การอัพโหลด) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">รูปภาพสิ่งของ</label>
-                    <div id="imageUploadArea" class="upload-area" onclick="document.getElementById('itemImageFile').click()">
-                        <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
-                        <div id="uploadPlaceholder">
-                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                            <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ</p>
-                            <p class="text-gray-400 text-sm mt-1">รองรับไฟล์ PNG, JPG, GIF ขนาดไม่เกิน 5MB</p>
-                        </div>
-                        <div id="imagePreview" class="hidden">
-                            <img id="previewImage" class="image-preview mx-auto mb-2">
-                            <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
-                        </div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">URL รูปภาพ</label>
+                    <input type="text" id="itemImageUrlInput" class="input-dark w-full" 
+                           placeholder="https://example.com/image.jpg" 
+                           value="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces">
+                    <p class="text-xs text-gray-400 mt-1">
+                        กรอก URL รูปภาพของสิ่งของ (ถ้าไม่กรอกจะใช้รูปภาพเริ่มต้น)
+                    </p>
+                    <!-- Image Preview -->
+                    <div class="mt-4 flex justify-center">
+                        <img id="imagePreview" src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces" 
+                             class="image-preview hidden" alt="ภาพตัวอย่าง">
                     </div>
-                    <input type="hidden" id="itemImageInput" value="">
-                    <div id="uploadProgress" class="hidden mt-2">
-                        <div class="flex justify-between text-xs text-gray-400 mb-1">
-                            <span>กำลังอัพโหลด...</span>
-                            <span id="uploadPercent">0%</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                            <div id="uploadProgressBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div id="uploadError" class="hidden text-red-400 text-xs mt-2"></div>
                 </div>
             </div>
             
@@ -1312,8 +1284,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1332,7 +1303,6 @@
         let editItemId = null;
         let currentBotInfo = null;
         let debounceTimer = null;
-        let selectedImageFile = null;
 
         // =============================================
         // Utility Functions
@@ -1340,30 +1310,7 @@
         function formatDate(dateString) {
             if (!dateString) return '-';
             try {
-                let date;
-                
-                if (dateString.includes('/')) {
-                    const parts = dateString.split(/[/ :]/);
-                    if (parts.length >= 3) {
-                        const day = parseInt(parts[0]);
-                        const month = parseInt(parts[1]) - 1;
-                        const year = parseInt(parts[2]);
-                        date = new Date(year, month, day);
-                        
-                        if (parts.length >= 5) {
-                            const hour = parseInt(parts[3]) || 0;
-                            const minute = parseInt(parts[4]) || 0;
-                            date.setHours(hour, minute);
-                        }
-                    } else {
-                        date = new Date(dateString);
-                    }
-                } else if (dateString.includes('-')) {
-                    date = new Date(dateString);
-                } else {
-                    date = new Date(dateString);
-                }
-                
+                const date = new Date(dateString);
                 if (isNaN(date.getTime())) {
                     return dateString;
                 }
@@ -1535,606 +1482,31 @@
         }
 
         // =============================================
-        // LINE Bot Functions
-        // =============================================
-        function checkTokenFormat() {
-            const tokenInput = document.getElementById('channelAccessToken');
-            const token = tokenInput.value.trim();
-            const tokenStatus = document.getElementById('tokenStatus');
-            
-            if (debounceTimer) {
-                clearTimeout(debounceTimer);
-            }
-            
-            if (!token) {
-                tokenInput.classList.remove('token-valid', 'token-invalid');
-                tokenStatus.classList.add('hidden');
-                updateBotConnectionStatus({ status: 'not_configured' });
-                return false;
-            }
-            
-            let isValidFormat = false;
-            
-            if (token.length >= 30) {
-                isValidFormat = true;
-            }
-            
-            if (isValidFormat) {
-                tokenInput.classList.add('token-valid');
-                tokenInput.classList.remove('token-invalid');
-                tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
-                tokenStatus.classList.remove('hidden');
-                
-                debounceTimer = setTimeout(() => {
-                    autoDetectBotInfo();
-                }, 1500);
-                
-                return true;
-            } else {
-                tokenInput.classList.add('token-invalid');
-                tokenInput.classList.remove('token-valid');
-                tokenStatus.innerHTML = '<i class="fas fa-exclamation-circle text-red-400 mr-1"></i><span class="text-red-400">รูปแบบ Token อาจไม่ถูกต้อง</span>';
-                tokenStatus.classList.remove('hidden');
-                updateBotConnectionStatus({ 
-                    status: 'connection_failed',
-                    message: 'รูปแบบ Token ไม่ถูกต้อง'
-                });
-                return false;
-            }
-        }
-
-        async function autoDetectBotInfo() {
-            const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
-            
-            if (!channelAccessToken) {
-                showMessage('warning', 'กรุณากรอก Channel Access Token', 'ต้องมี Token ในการดึงข้อมูลบอท');
-                return;
-            }
-            
-            try {
-                updateBotConnectionStatus({
-                    status: 'checking',
-                    message: 'กำลังดึงข้อมูลบอท...'
-                });
-                
-                const result = await callAPI('getBotProfile', {
-                    channelAccessToken: channelAccessToken
-                });
-                
-                if (result.success && result.botInfo) {
-                    const botInfo = result.botInfo;
-                    currentBotInfo = botInfo;
-                    
-                    const botNameInput = document.getElementById('botNameInput');
-                    const botPictureUrl = document.getElementById('botPictureUrl');
-                    
-                    if (botInfo.displayName) {
-                        botNameInput.value = botInfo.displayName;
-                        botNameInput.classList.add('auto-fill-success');
-                        setTimeout(() => {
-                            botNameInput.classList.remove('auto-fill-success');
-                        }, 1500);
-                    }
-                    
-                    if (botInfo.pictureUrl) {
-                        botPictureUrl.value = botInfo.pictureUrl;
-                        botPictureUrl.classList.add('auto-fill-success');
-                        setTimeout(() => {
-                            botPictureUrl.classList.remove('auto-fill-success');
-                        }, 1500);
-                    }
-                    
-                    updateBotConnectionStatus({
-                        status: 'connected',
-                        botName: botInfo.displayName,
-                        pictureUrl: botInfo.pictureUrl,
-                        statusMessage: botInfo.statusMessage || 'ระบบยืมคืนออนไลน์'
-                    });
-                    
-                    showNotification('success', 'ดึงข้อมูลบอทสำเร็จ', 'ระบบได้ดึงข้อมูลบอทอัตโนมัติแล้ว');
-                    
-                } else {
-                    updateBotConnectionStatus({
-                        status: 'connection_failed',
-                        message: result.message || 'ไม่สามารถดึงข้อมูลบอทได้'
-                    });
-                    
-                    const botNameInput = document.getElementById('botNameInput');
-                    const channelSecret = document.getElementById('channelSecret').value.trim();
-                    if (channelSecret && !botNameInput.value.trim()) {
-                        botNameInput.value = `LINE Bot ${channelSecret.substring(0, 8)}`;
-                    }
-                    
-                    updateBotConnectionStatus({
-                        status: 'connected',
-                        botName: botNameInput.value || 'LINE Bot'
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Auto-detect bot info failed:', error);
-                updateBotConnectionStatus({
-                    status: 'connection_failed',
-                    message: 'เกิดข้อผิดพลาดในการดึงข้อมูล'
-                });
-                
-                showMessage('error', 'ไม่สามารถดึงข้อมูลบอทอัตโนมัติ', 'คุณยังสามารถกรอกข้อมูลบอทด้วยตนเองได้');
-            }
-        }
-
-        async function loadBotSettings() {
-            try {
-                showLoading();
-                const data = await callAPI('getBotSettings');
-                
-                if (data.success && data.settings) {
-                    const channelAccessToken = document.getElementById('channelAccessToken');
-                    const channelSecret = document.getElementById('channelSecret');
-                    const botNameInput = document.getElementById('botNameInput');
-                    const botPictureUrl = document.getElementById('botPictureUrl');
-                    
-                    const tokenValue = data.settings.channel_access_token?.value || '';
-                    const secretValue = data.settings.channel_secret?.value || '';
-                    
-                    channelAccessToken.value = tokenValue;
-                    channelSecret.value = secretValue;
-                    
-                    botNameInput.value = data.settings.bot_name?.value || '';
-                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
-                    
-                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
-                    
-                    const notificationEnabled = document.getElementById('notificationEnabled');
-                    const notifyOnRequest = document.getElementById('notifyOnRequest');
-                    const notifyOnApprove = document.getElementById('notifyOnApprove');
-                    const notifyOnReject = document.getElementById('notifyOnReject');
-                    const notifyOnReturn = document.getElementById('notifyOnReturn');
-                    const notifyDueReminder = document.getElementById('notifyDueReminder');
-                    const notifyOverdue = document.getElementById('notifyOverdue');
-                    
-                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
-                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
-                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
-                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
-                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
-                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
-                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
-                    
-                    if (tokenValue.trim()) {
-                        setTimeout(() => {
-                            checkTokenFormat();
-                        }, 500);
-                    } else {
-                        updateBotConnectionStatus({ status: 'not_configured' });
-                    }
-                    
-                    hideLoading();
-                    showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
-                } else {
-                    hideLoading();
-                    showMessage('info', 'ยังไม่มีการตั้งค่า', 'กรุณาตั้งค่า LINE Bot ใหม่');
-                }
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Error loading bot settings:', error);
-                showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
-                
-                document.getElementById('notificationEnabled').checked = true;
-                document.getElementById('notifyOnRequest').checked = true;
-                document.getElementById('notifyOnApprove').checked = true;
-                document.getElementById('notifyOnReject').checked = true;
-                document.getElementById('notifyOnReturn').checked = true;
-                document.getElementById('notifyDueReminder').checked = true;
-                document.getElementById('notifyOverdue').checked = true;
-            }
-        }
-
-        async function saveBotSettings() {
-            try {
-                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
-                
-                if (!channelAccessToken) {
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'กรุณากรอก Channel Access Token',
-                        text: 'ต้องมี Channel Access Token เพื่อใช้งาน LINE Bot',
-                        confirmButtonText: 'ตกลง',
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    return;
-                }
-                
-                if (channelAccessToken.length < 30) {
-                    const { value: confirm } = await Swal.fire({
-                        icon: 'question',
-                        title: 'รูปแบบ Token อาจไม่ถูกต้อง',
-                        html: `Channel Access Token ของคุณดูเหมือนจะสั้นเกินไป<br>
-                              <small>รูปแบบมาตรฐานควรมีความยาวอย่างน้อย 30 ตัวอักษร</small>`,
-                        showCancelButton: true,
-                        confirmButtonText: 'ใช้ตามนี้',
-                        cancelButtonText: 'แก้ไข',
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    if (!confirm) {
-                        document.getElementById('channelAccessToken').focus();
-                        return;
-                    }
-                }
-                
-                const botSettings = {
-                    channel_access_token: {
-                        value: channelAccessToken,
-                        description: 'Channel Access Token สำหรับ LINE Messaging API',
-                        isActive: true
-                    },
-                    channel_secret: {
-                        value: document.getElementById('channelSecret').value.trim(),
-                        description: 'Channel Secret สำหรับ LINE Messaging API',
-                        isActive: true
-                    },
-                    bot_name: {
-                        value: document.getElementById('botNameInput').value.trim(),
-                        description: 'ชื่อของบอทที่แสดงใน LINE',
-                        isActive: true
-                    },
-                    bot_picture_url: {
-                        value: document.getElementById('botPictureUrl').value.trim(),
-                        description: 'URL รูปภาพโปรไฟล์บอท',
-                        isActive: true
-                    },
-                    admin_notify_group: {
-                        value: document.getElementById('adminNotifyGroup').value.trim(),
-                        description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
-                        isActive: true
-                    },
-                    notification_enabled: {
-                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
-                        description: 'เปิดใช้งานการแจ้งเตือน',
-                        isActive: true
-                    },
-                    notify_on_request: {
-                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
-                        isActive: true
-                    },
-                    notify_on_approve: {
-                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
-                        isActive: true
-                    },
-                    notify_on_reject: {
-                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
-                        isActive: true
-                    },
-                    notify_on_return: {
-                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อมีการคืนของ',
-                        isActive: true
-                    },
-                    notify_due_reminder: {
-                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
-                        isActive: true
-                    },
-                    notify_overdue: {
-                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
-                        isActive: true
-                    }
-                };
-                
-                showLoading();
-                
-                const result = await callAPI('updateBotSettings', {
-                    settings: JSON.stringify(botSettings)
-                });
-                
-                hideLoading();
-                
-                if (result.success) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'บันทึกสำเร็จ',
-                        text: 'บันทึกการตั้งค่า LINE Bot สำเร็จ!',
-                        timer: 3000,
-                        showConfirmButton: false,
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    if (channelAccessToken) {
-                        const botName = botSettings.bot_name.value || 'LINE Bot';
-                        updateBotConnectionStatus({
-                            status: 'connected',
-                            botName: botName
-                        });
-                    }
-                    
-                    setTimeout(() => {
-                        autoDetectBotInfo();
-                    }, 1000);
-                    
-                    showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
-                    
-                } else {
-                    throw new Error(result.message || 'ไม่สามารถบันทึกได้');
-                }
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Error saving bot settings:', error);
-                
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'ไม่สามารถบันทึกได้',
-                    html: `เกิดข้อผิดพลาดในการบันทึก: <br><small>${error.message}</small>`,
-                    confirmButtonText: 'ตกลง',
-                    background: '#1e293b',
-                    color: '#e2e8f0'
-                });
-            }
-        }
-
-        async function testBotConnection() {
-            try {
-                showLoading();
-                
-                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
-                
-                if (!channelAccessToken) {
-                    showMessage('error', 'กรุณากรอก Channel Access Token ก่อน', 'ต้องมี Token ในการทดสอบการเชื่อมต่อ');
-                    hideLoading();
-                    return;
-                }
-                
-                const result = await callAPI('testBotConnection');
-                
-                hideLoading();
-                
-                if (result.success) {
-                    const testResult = result.testResult;
-                    
-                    if (testResult.success) {
-                        const botName = result.botName || testResult.botInfo?.displayName || 'LINE Bot';
-                        
-                        const botNameInput = document.getElementById('botNameInput');
-                        const botPictureUrl = document.getElementById('botPictureUrl');
-                        
-                        if (!botNameInput.value.trim() && testResult.botInfo?.displayName) {
-                            botNameInput.value = testResult.botInfo.displayName;
-                        }
-                        
-                        if (!botPictureUrl.value.trim() && testResult.botInfo?.pictureUrl) {
-                            botPictureUrl.value = testResult.botInfo.pictureUrl;
-                        }
-                        
-                        updateBotInfo(testResult.botInfo);
-                        
-                        showMessage('success', 'ทดสอบสำเร็จ', `เชื่อมต่อกับ LINE Bot "${botName}" สำเร็จ!`);
-                        
-                    } else {
-                        showMessage('error', 'ทดสอบล้มเหลว', result.message || 'ไม่สามารถเชื่อมต่อกับ LINE Bot ได้');
-                    }
-                }
-                
-            } catch (error) {
-                hideLoading();
-                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
-            }
-        }
-
-        function updateBotConnectionStatus(status) {
-            const statusIndicator = document.getElementById('botStatusIndicator');
-            const statusText = document.getElementById('botStatusText');
-            const botInfoCard = document.getElementById('botInfoCard');
-            const connectionStatusDiv = document.getElementById('botConnectionStatus');
-            
-            if (!status) return;
-            
-            switch(status.status) {
-                case 'checking':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500 animate-pulse';
-                    statusText.textContent = status.message || 'กำลังตรวจสอบ...';
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
-                    botInfoCard.classList.add('hidden');
-                    break;
-                    
-                case 'connected':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
-                    statusText.textContent = 'เชื่อมต่อแล้ว: ' + (status.botName || 'LINE Bot');
-                    connectionStatusDiv.querySelector('div').classList.add('bot-status-connected');
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-disconnected');
-                    botInfoCard.classList.remove('hidden');
-                    
-                    updateBotInfo({
-                        displayName: status.botName,
-                        pictureUrl: status.pictureUrl,
-                        statusMessage: status.statusMessage
-                    });
-                    break;
-                    
-                case 'not_configured':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
-                    statusText.textContent = 'ยังไม่ได้ตั้งค่า';
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
-                    botInfoCard.classList.add('hidden');
-                    break;
-                    
-                case 'connection_failed':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
-                    statusText.textContent = status.message || 'เชื่อมต่อล้มเหลว';
-                    connectionStatusDiv.querySelector('div').classList.add('bot-status-disconnected');
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected');
-                    botInfoCard.classList.remove('hidden');
-                    break;
-                    
-                default:
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-500';
-                    statusText.textContent = 'ไม่ทราบสถานะ';
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
-                    botInfoCard.classList.add('hidden');
-            }
-        }
-
-        function updateBotInfo(info) {
-            if (!info) return;
-            
-            const botPicture = document.getElementById('botPicture');
-            const botName = document.getElementById('botName');
-            const botStatusMessage = document.getElementById('botStatusMessage');
-            const botLastTested = document.getElementById('botLastTested');
-            
-            if (info.pictureUrl) {
-                botPicture.src = info.pictureUrl;
-            } else if (info.displayName) {
-                const displayName = info.displayName || 'Bot';
-                botPicture.src = 'https://ui-avatars.com/api/?name=' + 
-                    encodeURIComponent(displayName) + 
-                    '&background=00C300&color=fff&size=128';
-            }
-            
-            if (info.displayName) {
-                botName.textContent = info.displayName;
-            }
-            
-            if (info.statusMessage) {
-                botStatusMessage.textContent = info.statusMessage;
-            }
-            
-            botLastTested.textContent = 'อัพเดตล่าสุด: ' + formatTime(new Date());
-            
-            const botNameInput = document.getElementById('botNameInput');
-            const botPictureUrl = document.getElementById('botPictureUrl');
-            
-            if (info.displayName) {
-                botNameInput.value = info.displayName;
-                botNameInput.classList.add('auto-fill-success');
-                setTimeout(() => {
-                    botNameInput.classList.remove('auto-fill-success');
-                }, 1500);
-            }
-            
-            if (info.pictureUrl) {
-                botPictureUrl.value = info.pictureUrl;
-                botPictureUrl.classList.add('auto-fill-success');
-                setTimeout(() => {
-                    botPictureUrl.classList.remove('auto-fill-success');
-                }, 1500);
-            }
-        }
-
-        // =============================================
-        // Image Upload Functions
-        // =============================================
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-            if (!validTypes.includes(file.type)) {
-                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF)');
-                return;
-            }
-            
-            // Validate file size (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                showMessage('error', 'ไฟล์มีขนาดใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 5MB');
-                return;
-            }
-            
-            selectedImageFile = file;
-            
-            // Show preview
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const previewImage = document.getElementById('previewImage');
-                const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-                const imagePreview = document.getElementById('imagePreview');
-                
-                previewImage.src = e.target.result;
-                uploadPlaceholder.classList.add('hidden');
-                imagePreview.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function uploadImageToDrive() {
-            if (!selectedImageFile) {
-                return { success: true, url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE };
-            }
-            
-            try {
-                showLoading();
-                document.getElementById('uploadProgress').classList.remove('hidden');
-                document.getElementById('uploadError').classList.add('hidden');
-                
-                const formData = new FormData();
-                formData.append('action', 'uploadImage');
-                formData.append('uid', currentUser.uid);
-                formData.append('image', selectedImageFile);
-                
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                hideLoading();
-                document.getElementById('uploadProgress').classList.add('hidden');
-                
-                if (result.success) {
-                    return { success: true, url: result.imageUrl };
-                } else {
-                    document.getElementById('uploadError').textContent = result.error;
-                    document.getElementById('uploadError').classList.remove('hidden');
-                    return { success: false, error: result.error };
-                }
-                
-            } catch (error) {
-                hideLoading();
-                document.getElementById('uploadProgress').classList.add('hidden');
-                document.getElementById('uploadError').textContent = 'เกิดข้อผิดพลาดในการอัพโหลด';
-                document.getElementById('uploadError').classList.remove('hidden');
-                return { success: false, error: error.message };
-            }
-        }
-
-        // =============================================
         // API Functions
         // =============================================
         async function callAPI(action, data = {}) {
             try {
-                showLoading();
-                
-                const params = new URLSearchParams({
-                    action: action,
-                    uid: currentUser?.uid || '',
-                    ...data
-                });
-                
                 console.log('Calling API:', action, data);
                 
-                const response = await fetch(CONFIG.API_URL, {
+                const options = {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: params
-                });
+                    body: new URLSearchParams({
+                        action: action,
+                        uid: currentUser?.uid || '',
+                        ...data
+                    })
+                };
+                
+                const response = await fetch(CONFIG.API_URL, options);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const result = await response.json();
-                
-                hideLoading();
                 
                 if (!result.success) {
                     throw new Error(result.error || result.message || 'API Error');
@@ -2143,7 +1515,6 @@
                 return result;
                 
             } catch (error) {
-                hideLoading();
                 console.error('API Call Error:', error);
                 
                 let errorMessage = error.message;
@@ -2156,6 +1527,140 @@
                 showMessage('error', 'เกิดข้อผิดพลาด', errorMessage);
                 throw error;
             }
+        }
+
+        // =============================================
+        // Item Management Functions (แก้ไข)
+        // =============================================
+        async function editItem(itemId) {
+            try {
+                const result = await callAPI('getItemDetails', {
+                    itemId: itemId
+                });
+                
+                if (result.success && result.item) {
+                    const item = result.item;
+                    editItemId = itemId;
+                    
+                    document.getElementById('itemModalTitle').textContent = 'แก้ไขสิ่งของ';
+                    document.getElementById('saveItemBtn').textContent = 'อัปเดต';
+                    
+                    document.getElementById('itemIdInput').value = itemId;
+                    document.getElementById('itemNameInput').value = item.itemName || '';
+                    document.getElementById('itemDescInput').value = item.description || '';
+                    document.getElementById('itemCategoryInput').value = item.category || 'book';
+                    document.getElementById('itemQuantityInput').value = item.quantity || 1;
+                    document.getElementById('itemLocationInput').value = item.location || '';
+                    document.getElementById('itemImageUrlInput').value = item.imageUrl || CONFIG.DEFAULT_IMAGE;
+                    
+                    // Show image preview
+                    const imagePreview = document.getElementById('imagePreview');
+                    imagePreview.src = item.imageUrl || CONFIG.DEFAULT_IMAGE;
+                    imagePreview.classList.remove('hidden');
+                    
+                    document.getElementById('addItemModal').classList.remove('hidden');
+                }
+            } catch (error) {
+                showMessage('error', 'ไม่สามารถโหลดข้อมูลได้', error.message);
+            }
+        }
+
+        async function saveItem() {
+            try {
+                showLoading();
+                
+                const itemId = document.getElementById('itemIdInput').value;
+                const isEdit = !!itemId;
+                
+                const itemData = {
+                    itemName: document.getElementById('itemNameInput').value.trim(),
+                    description: document.getElementById('itemDescInput').value.trim(),
+                    category: document.getElementById('itemCategoryInput').value,
+                    quantity: parseInt(document.getElementById('itemQuantityInput').value),
+                    location: document.getElementById('itemLocationInput').value.trim(),
+                    imageUrl: document.getElementById('itemImageUrlInput').value.trim() || CONFIG.DEFAULT_IMAGE
+                };
+                
+                if (!itemData.itemName) {
+                    hideLoading();
+                    showMessage('error', 'กรุณากรอกชื่อสิ่งของ');
+                    return;
+                }
+                
+                if (itemData.quantity < 1) {
+                    hideLoading();
+                    showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
+                    return;
+                }
+                
+                // เพิ่ม itemId ถ้าเป็นการแก้ไข
+                if (isEdit) {
+                    itemData.itemId = itemId;
+                }
+                
+                const action = isEdit ? 'updateItem' : 'addItem';
+                const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
+                
+                const result = await callAPI(action, itemData);
+                
+                hideLoading();
+                
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: successMessage,
+                        text: `${itemData.itemName} เรียบร้อยแล้ว`,
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    
+                    closeItemModal();
+                    loadItemsForManagement();
+                    loadDashboardData();
+                    
+                    if (!document.getElementById('browseItems').classList.contains('hidden')) {
+                        loadItems();
+                    }
+                }
+                
+            } catch (error) {
+                hideLoading();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถบันทึกได้',
+                    text: error.message,
+                    background: '#1e293b',
+                    color: '#e2e8f0'
+                });
+            }
+        }
+
+        function openAddItemModal() {
+            editItemId = null;
+            document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
+            document.getElementById('saveItemBtn').textContent = 'บันทึก';
+            document.getElementById('addItemModal').classList.remove('hidden');
+            
+            // รีเซ็ตฟอร์มทั้งหมด
+            document.getElementById('itemIdInput').value = '';
+            document.getElementById('itemNameInput').value = '';
+            document.getElementById('itemDescInput').value = '';
+            document.getElementById('itemLocationInput').value = '';
+            document.getElementById('itemImageUrlInput').value = CONFIG.DEFAULT_IMAGE;
+            document.getElementById('itemQuantityInput').value = '1';
+            document.getElementById('itemCategoryInput').value = 'book';
+            
+            // Show image preview
+            const imagePreview = document.getElementById('imagePreview');
+            imagePreview.src = CONFIG.DEFAULT_IMAGE;
+            imagePreview.classList.remove('hidden');
+        }
+
+        function closeItemModal() {
+            document.getElementById('addItemModal').classList.add('hidden');
+            editItemId = null;
         }
 
         // =============================================
@@ -2195,17 +1700,11 @@
                     email: email
                 });
                 
+                hideLoading();
+                
                 if (result.success) {
                     currentUser = result.user;
                     updateUserUI(currentUser);
-                    
-                    notifications.push({
-                        type: 'success',
-                        icon: 'hand-wave',
-                        title: 'ยินดีต้อนรับ!',
-                        message: `สวัสดี ${currentUser.displayName} ยินดีต้อนรับสู่ระบบ`,
-                        timestamp: new Date()
-                    });
                     
                     showNotification('success', 'เข้าสู่ระบบสำเร็จ!', `ยินดีต้อนรับ ${currentUser.displayName}`);
                     
@@ -2214,6 +1713,7 @@
                 
             } catch (error) {
                 console.error('Login Error:', error);
+                hideLoading();
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถล็อกอินได้',
@@ -2333,10 +1833,6 @@
             }
             
             loadDashboardData();
-            
-            if (notifications.length > 0) {
-                showNotification('info', 'การแจ้งเตือนใหม่', `คุณมี ${notifications.length} การแจ้งเตือนใหม่`);
-            }
         }
 
         function updateNotificationCount() {
@@ -2558,12 +2054,6 @@
                     });
                     
                     if (result.success) {
-                        await sendLineNotification(result.borrowId, 'request', {
-                            itemName: itemName,
-                            userName: currentUser.displayName,
-                            note: note
-                        });
-                        
                         Swal.fire({
                             icon: 'success',
                             title: 'ยืมของสำเร็จ!',
@@ -2706,15 +2196,14 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('returnItem', {
                             borrowId: borrowId
                         });
                         
+                        hideLoading();
+                        
                         if (result.success) {
-                            await sendLineNotification(borrowId, 'return', {
-                                itemName: itemName
-                            });
-                            
                             Swal.fire({
                                 icon: 'success',
                                 title: 'คืนของสำเร็จ!',
@@ -2740,6 +2229,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถคืนได้',
@@ -2765,9 +2255,12 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('cancelBorrowRequest', {
                             borrowId: borrowId
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -2799,6 +2292,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถยกเลิกได้',
@@ -2901,18 +2395,14 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('approveRequest', {
                             borrowId: borrowId
                         });
                         
+                        hideLoading();
+                        
                         if (result.success) {
-                            await sendLineNotification(borrowId, 'approve', {
-                                itemName: itemName,
-                                userName: borrowerName,
-                                adminName: currentUser.displayName,
-                                lineId: borrowerLineId
-                            });
-                            
                             Swal.fire({
                                 icon: 'success',
                                 title: 'อนุมัติสำเร็จ!',
@@ -2938,6 +2428,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถอนุมัติได้',
@@ -2968,20 +2459,15 @@
             
             if (reason) {
                 try {
+                    showLoading();
                     const result = await callAPI('rejectRequest', {
                         borrowId: borrowId,
                         reason: reason
                     });
                     
+                    hideLoading();
+                    
                     if (result.success) {
-                        await sendLineNotification(borrowId, 'reject', {
-                            itemName: itemName,
-                            userName: borrowerName,
-                            adminName: currentUser.displayName,
-                            reason: reason,
-                            lineId: borrowerLineId
-                        });
-                        
                         Swal.fire({
                             icon: 'success',
                             title: 'ปฏิเสธสำเร็จ!',
@@ -3007,6 +2493,7 @@
                     }
                     
                 } catch (error) {
+                    hideLoading();
                     Swal.fire({
                         icon: 'error',
                         title: 'ไม่สามารถปฏิเสธได้',
@@ -3093,123 +2580,6 @@
             `).join('');
         }
 
-        async function editItem(itemId) {
-            try {
-                const result = await callAPI('getItemDetails', {
-                    itemId: itemId
-                });
-                
-                if (result.success && result.item) {
-                    const item = result.item;
-                    editItemId = itemId;
-                    
-                    document.getElementById('itemModalTitle').textContent = 'แก้ไขสิ่งของ';
-                    document.getElementById('saveItemBtn').textContent = 'อัปเดต';
-                    
-                    document.getElementById('itemIdInput').value = itemId;
-                    document.getElementById('itemNameInput').value = item.itemName || '';
-                    document.getElementById('itemDescInput').value = item.description || '';
-                    document.getElementById('itemCategoryInput').value = item.category || 'book';
-                    document.getElementById('itemQuantityInput').value = item.quantity || 1;
-                    document.getElementById('itemLocationInput').value = item.location || '';
-                    document.getElementById('itemImageInput').value = item.imageUrl || '';
-                    
-                    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-                    const imagePreview = document.getElementById('imagePreview');
-                    const previewImage = document.getElementById('previewImage');
-                    
-                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE) {
-                        previewImage.src = item.imageUrl;
-                        uploadPlaceholder.classList.add('hidden');
-                        imagePreview.classList.remove('hidden');
-                    } else {
-                        uploadPlaceholder.classList.remove('hidden');
-                        imagePreview.classList.add('hidden');
-                    }
-                    
-                    selectedImageFile = null;
-                    
-                    document.getElementById('addItemModal').classList.remove('hidden');
-                }
-            } catch (error) {
-                showMessage('error', 'ไม่สามารถโหลดข้อมูลได้', error.message);
-            }
-        }
-
-        async function saveItem() {
-            try {
-                const itemId = document.getElementById('itemIdInput').value;
-                const isEdit = !!itemId;
-                
-                const itemData = {
-                    itemId: itemId,
-                    itemName: document.getElementById('itemNameInput').value.trim(),
-                    description: document.getElementById('itemDescInput').value.trim(),
-                    category: document.getElementById('itemCategoryInput').value,
-                    quantity: parseInt(document.getElementById('itemQuantityInput').value),
-                    location: document.getElementById('itemLocationInput').value.trim()
-                };
-                
-                if (!itemData.itemName) {
-                    showMessage('error', 'กรุณากรอกชื่อสิ่งของ');
-                    return;
-                }
-                
-                if (itemData.quantity < 1) {
-                    showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
-                    return;
-                }
-                
-                // Upload image if selected
-                let imageUrl = document.getElementById('itemImageInput').value;
-                if (selectedImageFile) {
-                    const uploadResult = await uploadImageToDrive();
-                    if (uploadResult.success) {
-                        imageUrl = uploadResult.url;
-                    } else {
-                        showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
-                        return;
-                    }
-                }
-                
-                itemData.imageUrl = imageUrl || CONFIG.DEFAULT_IMAGE;
-                
-                const action = isEdit ? 'updateItem' : 'addItem';
-                const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
-                
-                const result = await callAPI(action, itemData);
-                
-                if (result.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: successMessage,
-                        text: `${itemData.itemName} เรียบร้อยแล้ว`,
-                        timer: 3000,
-                        showConfirmButton: false,
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    closeItemModal();
-                    loadItemsForManagement();
-                    loadDashboardData();
-                    
-                    if (!document.getElementById('browseItems').classList.contains('hidden')) {
-                        loadItems();
-                    }
-                }
-                
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ไม่สามารถบันทึกได้',
-                    text: error.message,
-                    background: '#1e293b',
-                    color: '#e2e8f0'
-                });
-            }
-        }
-
         async function deleteItem(itemId, itemName) {
             Swal.fire({
                 title: 'ยืนยันการลบ',
@@ -3223,9 +2593,12 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('deleteItem', {
                             itemId: itemId
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3243,6 +2616,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถลบได้',
@@ -3253,34 +2627,6 @@
                     }
                 }
             });
-        }
-
-        function openAddItemModal() {
-            editItemId = null;
-            document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
-            document.getElementById('saveItemBtn').textContent = 'บันทึก';
-            document.getElementById('addItemModal').classList.remove('hidden');
-            
-            document.getElementById('itemIdInput').value = '';
-            document.getElementById('itemNameInput').value = '';
-            document.getElementById('itemDescInput').value = '';
-            document.getElementById('itemLocationInput').value = '';
-            document.getElementById('itemImageInput').value = '';
-            document.getElementById('itemQuantityInput').value = '1';
-            document.getElementById('itemCategoryInput').value = 'book';
-            
-            const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-            const imagePreview = document.getElementById('imagePreview');
-            uploadPlaceholder.classList.remove('hidden');
-            imagePreview.classList.add('hidden');
-            
-            selectedImageFile = null;
-        }
-
-        function closeItemModal() {
-            document.getElementById('addItemModal').classList.add('hidden');
-            editItemId = null;
-            selectedImageFile = null;
         }
 
         // =============================================
@@ -3440,7 +2786,7 @@
 
         async function toggleUserStatus(userId, userName, currentStatus) {
             const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-            const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดใช้งาน';
+            const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน';
             
             Swal.fire({
                 title: `ยืนยัน${actionText}`,
@@ -3454,10 +2800,13 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('updateUserStatus', {
                             targetUserId: userId,
                             status: newStatus
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3495,6 +2844,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถเปลี่ยนสถานะได้',
@@ -3521,10 +2871,13 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('updateUserRole', {
                             targetUserId: userId,
                             role: 'admin'
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3563,6 +2916,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถตั้งแอดมินได้',
@@ -3588,10 +2942,13 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('updateUserRole', {
                             targetUserId: userId,
                             role: 'user'
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3630,6 +2987,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถลดสถานะได้',
@@ -3647,9 +3005,12 @@
         // =============================================
         async function loadUserDetails(userId) {
             try {
+                showLoading();
                 const result = await callAPI('getUserDetails', {
                     targetUserId: userId
                 });
+                
+                hideLoading();
                 
                 if (result.success && result.user) {
                     const user = result.user;
@@ -3760,6 +3121,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 showMessage('error', 'ไม่สามารถโหลดรายละเอียดผู้ใช้ได้', error.message);
             }
         }
@@ -3813,6 +3175,7 @@
 
         async function saveSettings() {
             try {
+                showLoading();
                 const updatedSettings = {
                     system_name: document.getElementById('systemName').value,
                     max_borrow_days: document.getElementById('maxBorrowDays').value,
@@ -3825,6 +3188,8 @@
                 const result = await callAPI('updateSettings', {
                     settings: JSON.stringify(updatedSettings)
                 });
+                
+                hideLoading();
                 
                 if (result.success) {
                     settings = { ...settings, ...updatedSettings };
@@ -3851,6 +3216,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถบันทึกได้',
@@ -3862,21 +3228,176 @@
         }
 
         // =============================================
-        // LINE Notification Functions
+        // LINE Bot Functions
         // =============================================
-        async function sendLineNotification(borrowId, type, data) {
+        async function loadBotSettings() {
             try {
-                const result = await callAPI('sendNotification', {
-                    borrowId: borrowId,
-                    type: type,
-                    data: JSON.stringify(data)
+                showLoading();
+                const data = await callAPI('getBotSettings');
+                
+                hideLoading();
+                
+                if (data.success && data.settings) {
+                    const channelAccessToken = document.getElementById('channelAccessToken');
+                    const channelSecret = document.getElementById('channelSecret');
+                    const botNameInput = document.getElementById('botNameInput');
+                    const botPictureUrl = document.getElementById('botPictureUrl');
+                    
+                    const tokenValue = data.settings.channel_access_token?.value || '';
+                    const secretValue = data.settings.channel_secret?.value || '';
+                    
+                    channelAccessToken.value = tokenValue;
+                    channelSecret.value = secretValue;
+                    
+                    botNameInput.value = data.settings.bot_name?.value || '';
+                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
+                    
+                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
+                    
+                    const notificationEnabled = document.getElementById('notificationEnabled');
+                    const notifyOnRequest = document.getElementById('notifyOnRequest');
+                    const notifyOnApprove = document.getElementById('notifyOnApprove');
+                    const notifyOnReject = document.getElementById('notifyOnReject');
+                    const notifyOnReturn = document.getElementById('notifyOnReturn');
+                    const notifyDueReminder = document.getElementById('notifyDueReminder');
+                    const notifyOverdue = document.getElementById('notifyOverdue');
+                    
+                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
+                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
+                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
+                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
+                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
+                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
+                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
+                    
+                    showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
+                } else {
+                    showMessage('info', 'ยังไม่มีการตั้งค่า', 'กรุณาตั้งค่า LINE Bot ใหม่');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error loading bot settings:', error);
+                showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
+            }
+        }
+
+        async function saveBotSettings() {
+            try {
+                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+                
+                if (!channelAccessToken) {
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'กรุณากรอก Channel Access Token',
+                        text: 'ต้องมี Channel Access Token เพื่อใช้งาน LINE Bot',
+                        confirmButtonText: 'ตกลง',
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    return;
+                }
+                
+                showLoading();
+                
+                const botSettings = {
+                    channel_access_token: {
+                        value: channelAccessToken,
+                        description: 'Channel Access Token สำหรับ LINE Messaging API',
+                        isActive: true
+                    },
+                    channel_secret: {
+                        value: document.getElementById('channelSecret').value.trim(),
+                        description: 'Channel Secret สำหรับ LINE Messaging API',
+                        isActive: true
+                    },
+                    bot_name: {
+                        value: document.getElementById('botNameInput').value.trim(),
+                        description: 'ชื่อของบอทที่แสดงใน LINE',
+                        isActive: true
+                    },
+                    bot_picture_url: {
+                        value: document.getElementById('botPictureUrl').value.trim(),
+                        description: 'URL รูปภาพโปรไฟล์บอท',
+                        isActive: true
+                    },
+                    admin_notify_group: {
+                        value: document.getElementById('adminNotifyGroup').value.trim(),
+                        description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
+                        isActive: true
+                    },
+                    notification_enabled: {
+                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
+                        description: 'เปิดใช้งานการแจ้งเตือน',
+                        isActive: true
+                    },
+                    notify_on_request: {
+                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
+                        isActive: true
+                    },
+                    notify_on_approve: {
+                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
+                        isActive: true
+                    },
+                    notify_on_reject: {
+                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
+                        isActive: true
+                    },
+                    notify_on_return: {
+                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อมีการคืนของ',
+                        isActive: true
+                    },
+                    notify_due_reminder: {
+                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
+                        isActive: true
+                    },
+                    notify_overdue: {
+                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
+                        isActive: true
+                    }
+                };
+                
+                const result = await callAPI('updateBotSettings', {
+                    settings: JSON.stringify(botSettings)
                 });
                 
+                hideLoading();
+                
                 if (result.success) {
-                    console.log('LINE notification sent successfully:', type);
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ',
+                        text: 'บันทึกการตั้งค่า LINE Bot สำเร็จ!',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    
+                    showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
+                    
+                } else {
+                    throw new Error(result.message || 'ไม่สามารถบันทึกได้');
                 }
+                
             } catch (error) {
-                console.error('Error sending LINE notification:', error);
+                hideLoading();
+                console.error('Error saving bot settings:', error);
+                
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถบันทึกได้',
+                    html: `เกิดข้อผิดพลาดในการบันทึก: <br><small>${error.message}</small>`,
+                    confirmButtonText: 'ตกลง',
+                    background: '#1e293b',
+                    color: '#e2e8f0'
+                });
             }
         }
 
@@ -3923,16 +3444,17 @@
                         email: email
                     });
                     
+                    hideLoading();
+                    
                     if (result.success) {
                         currentUser = result.user;
                         updateUserUI(currentUser);
                         loadSettings();
                     }
-                    
-                    hideLoading();
                 }
                 
             } catch (error) {
+                hideLoading();
                 console.error('App Initialization Error:', error);
             }
         }
@@ -3947,35 +3469,12 @@
             }
         });
 
-        // Drag and drop for image upload
-        const uploadArea = document.getElementById('imageUploadArea');
-        if (uploadArea) {
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                
-                if (e.dataTransfer.files.length) {
-                    document.getElementById('itemImageFile').files = e.dataTransfer.files;
-                    handleImageUpload({ target: { files: e.dataTransfer.files } });
-                }
-            });
-        }
-
         // Start the app when page loads
         document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+
 </body>
 </html>
