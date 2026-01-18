@@ -1305,8 +1305,6 @@
     </div>
 
     <!-- JavaScript Application -->
-
-    <!-- JavaScript Application -->
     <script>
         // =============================================
         // Configuration
@@ -1519,8 +1517,6 @@
         // =============================================
         async function callAPI(action, data = {}, isFormData = false) {
             try {
-                showLoading();
-                
                 console.log('Calling API:', action, data);
                 
                 let options = {
@@ -1570,8 +1566,6 @@
                 
                 const result = await response.json();
                 
-                hideLoading();
-                
                 if (!result.success) {
                     throw new Error(result.error || result.message || 'API Error');
                 }
@@ -1579,7 +1573,6 @@
                 return result;
                 
             } catch (error) {
-                hideLoading();
                 console.error('API Call Error:', error);
                 
                 let errorMessage = error.message;
@@ -1757,6 +1750,8 @@
 
         async function saveItem() {
             try {
+                showLoading();
+                
                 const itemId = document.getElementById('itemIdInput').value;
                 const isEdit = !!itemId;
                 
@@ -1769,11 +1764,13 @@
                 };
                 
                 if (!itemData.itemName) {
+                    hideLoading();
                     showMessage('error', 'กรุณากรอกชื่อสิ่งของ');
                     return;
                 }
                 
                 if (itemData.quantity < 1) {
+                    hideLoading();
                     showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
                     return;
                 }
@@ -1787,6 +1784,7 @@
                         itemData.imageUrl = imageUrl;
                         itemData.updateImage = true;
                     } else {
+                        hideLoading();
                         showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
                         return;
                     }
@@ -1801,6 +1799,7 @@
                         if (uploadResult.success) {
                             itemData.imageUrl = uploadResult.imageUrl;
                         } else {
+                            hideLoading();
                             showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
                             return;
                         }
@@ -1818,6 +1817,8 @@
                 const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
                 
                 const result = await callAPI(action, itemData);
+                
+                hideLoading();
                 
                 if (result.success) {
                     Swal.fire({
@@ -1840,6 +1841,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถบันทึกได้',
@@ -1925,6 +1927,8 @@
                     email: email
                 });
                 
+                hideLoading();
+                
                 if (result.success) {
                     currentUser = result.user;
                     updateUserUI(currentUser);
@@ -1936,6 +1940,7 @@
                 
             } catch (error) {
                 console.error('Login Error:', error);
+                hideLoading();
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถล็อกอินได้',
@@ -2418,9 +2423,12 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('returnItem', {
                             borrowId: borrowId
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -2448,6 +2456,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถคืนได้',
@@ -2473,9 +2482,12 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('cancelBorrowRequest', {
                             borrowId: borrowId
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -2507,6 +2519,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถยกเลิกได้',
@@ -2609,9 +2622,12 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('approveRequest', {
                             borrowId: borrowId
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -2639,6 +2655,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถอนุมัติได้',
@@ -2669,10 +2686,13 @@
             
             if (reason) {
                 try {
+                    showLoading();
                     const result = await callAPI('rejectRequest', {
                         borrowId: borrowId,
                         reason: reason
                     });
+                    
+                    hideLoading();
                     
                     if (result.success) {
                         Swal.fire({
@@ -2700,6 +2720,7 @@
                     }
                     
                 } catch (error) {
+                    hideLoading();
                     Swal.fire({
                         icon: 'error',
                         title: 'ไม่สามารถปฏิเสธได้',
@@ -2799,9 +2820,12 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('deleteItem', {
                             itemId: itemId
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -2819,6 +2843,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถลบได้',
@@ -2988,7 +3013,7 @@
 
         async function toggleUserStatus(userId, userName, currentStatus) {
             const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-            const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดใช้งาน';
+            const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน';
             
             Swal.fire({
                 title: `ยืนยัน${actionText}`,
@@ -3002,10 +3027,13 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('updateUserStatus', {
                             targetUserId: userId,
                             status: newStatus
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3043,6 +3071,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถเปลี่ยนสถานะได้',
@@ -3069,10 +3098,13 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('updateUserRole', {
                             targetUserId: userId,
                             role: 'admin'
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3111,6 +3143,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถตั้งแอดมินได้',
@@ -3136,10 +3169,13 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
+                        showLoading();
                         const result = await callAPI('updateUserRole', {
                             targetUserId: userId,
                             role: 'user'
                         });
+                        
+                        hideLoading();
                         
                         if (result.success) {
                             Swal.fire({
@@ -3178,6 +3214,7 @@
                         }
                         
                     } catch (error) {
+                        hideLoading();
                         Swal.fire({
                             icon: 'error',
                             title: 'ไม่สามารถลดสถานะได้',
@@ -3195,9 +3232,12 @@
         // =============================================
         async function loadUserDetails(userId) {
             try {
+                showLoading();
                 const result = await callAPI('getUserDetails', {
                     targetUserId: userId
                 });
+                
+                hideLoading();
                 
                 if (result.success && result.user) {
                     const user = result.user;
@@ -3308,6 +3348,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 showMessage('error', 'ไม่สามารถโหลดรายละเอียดผู้ใช้ได้', error.message);
             }
         }
@@ -3361,6 +3402,7 @@
 
         async function saveSettings() {
             try {
+                showLoading();
                 const updatedSettings = {
                     system_name: document.getElementById('systemName').value,
                     max_borrow_days: document.getElementById('maxBorrowDays').value,
@@ -3373,6 +3415,8 @@
                 const result = await callAPI('updateSettings', {
                     settings: JSON.stringify(updatedSettings)
                 });
+                
+                hideLoading();
                 
                 if (result.success) {
                     settings = { ...settings, ...updatedSettings };
@@ -3399,6 +3443,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถบันทึกได้',
@@ -3414,7 +3459,10 @@
         // =============================================
         async function loadBotSettings() {
             try {
+                showLoading();
                 const data = await callAPI('getBotSettings');
+                
+                hideLoading();
                 
                 if (data.success && data.settings) {
                     const channelAccessToken = document.getElementById('channelAccessToken');
@@ -3455,6 +3503,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 console.error('Error loading bot settings:', error);
                 showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
             }
@@ -3475,6 +3524,8 @@
                     });
                     return;
                 }
+                
+                showLoading();
                 
                 const botSettings = {
                     channel_access_token: {
@@ -3543,6 +3594,8 @@
                     settings: JSON.stringify(botSettings)
                 });
                 
+                hideLoading();
+                
                 if (result.success) {
                     await Swal.fire({
                         icon: 'success',
@@ -3561,6 +3614,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 console.error('Error saving bot settings:', error);
                 
                 await Swal.fire({
@@ -3617,16 +3671,17 @@
                         email: email
                     });
                     
+                    hideLoading();
+                    
                     if (result.success) {
                         currentUser = result.user;
                         updateUserUI(currentUser);
                         loadSettings();
                     }
-                    
-                    hideLoading();
                 }
                 
             } catch (error) {
+                hideLoading();
                 console.error('App Initialization Error:', error);
             }
         }
