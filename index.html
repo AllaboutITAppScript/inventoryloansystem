@@ -368,6 +368,7 @@
                                     <span id="userRoleBadge" class="badge-user text-xs"></span>
                                 </div>
                                 <div id="userLineId" class="text-xs text-gray-400"></div>
+                                <div id="userEmail" class="text-xs text-gray-500 hidden"></div>
                             </div>
                             <button onclick="logout()" class="btn-danger text-sm">
                                 <i class="fas fa-sign-out-alt"></i>
@@ -1266,21 +1267,55 @@
         let debounceTimer = null;
 
         // =============================================
-        // Utility Functions
+        // Utility Functions - แก้ไขฟังก์ชัน formatDate
         // =============================================
         function formatDate(dateString) {
             if (!dateString) return '-';
             try {
-                const date = new Date(dateString);
+                // แก้ไข: รองรับรูปแบบวันที่จาก Google Sheets และ ISO string
+                let date;
+                
+                if (dateString.includes('/')) {
+                    // รูปแบบ: DD/MM/YYYY หรือ DD/MM/YYYY HH:MM
+                    const parts = dateString.split(/[/ :]/);
+                    if (parts.length >= 3) {
+                        const day = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1;
+                        const year = parseInt(parts[2]);
+                        date = new Date(year, month, day);
+                        
+                        if (parts.length >= 5) {
+                            const hour = parseInt(parts[3]) || 0;
+                            const minute = parseInt(parts[4]) || 0;
+                            date.setHours(hour, minute);
+                        }
+                    } else {
+                        date = new Date(dateString);
+                    }
+                } else if (dateString.includes('-')) {
+                    // รูปแบบ ISO string หรือ YYYY-MM-DD
+                    date = new Date(dateString);
+                } else {
+                    // Timestamp หรือรูปแบบอื่นๆ
+                    date = new Date(dateString);
+                }
+                
+                // ตรวจสอบว่าวันที่ถูกต้องหรือไม่
+                if (isNaN(date.getTime())) {
+                    return dateString; // คืนค่าเดิมถ้าวันที่ไม่ถูกต้อง
+                }
+                
                 const options = { 
                     year: 'numeric', 
                     month: 'short', 
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    timeZone: 'Asia/Bangkok'
                 };
                 return date.toLocaleDateString('th-TH', options);
             } catch (e) {
+                console.error('Error formatting date:', e, 'Date string:', dateString);
                 return dateString;
             }
         }
@@ -1438,7 +1473,7 @@
         }
 
         // =============================================
-        // LINE Bot Functions - แก้ไขส่วนนี้
+        // LINE Bot Functions
         // =============================================
         function checkTokenFormat() {
             const tokenInput = document.getElementById('channelAccessToken');
@@ -1567,7 +1602,6 @@
             }
         }
 
-        // แก้ไขฟังก์ชัน loadBotSettings ให้ดึงข้อมูลการตั้งค่าการแจ้งเตือนทั้งหมด
         async function loadBotSettings() {
             try {
                 showLoading();
@@ -1641,7 +1675,6 @@
             }
         }
 
-        // แก้ไขฟังก์ชัน saveBotSettings ให้บันทึกข้อมูลทั้งหมด
         async function saveBotSettings() {
             try {
                 const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
@@ -1998,7 +2031,7 @@
         }
 
         // =============================================
-        // LINE Login Functions
+        // LINE Login Functions - แก้ไขการรับอีเมล
         // =============================================
         async function loginWithLINE() {
             try {
@@ -2012,17 +2045,36 @@
                 }
                 
                 const profile = await liff.getProfile();
-                let email = '';
                 
+                // แก้ไข: รับข้อมูลอีเมลจาก context
+                let email = '';
                 try {
+                    // ใช้ context เพื่อรับข้อมูลเพิ่มเติม
+                    const context = liff.getContext();
+                    if (context) {
+                        // ลองดึงข้อมูลจาก context
+                        console.log('LINE Context:', context);
+                    }
+                    
+                    // ใช้ getDecodedIDToken เพื่อรับอีเมล
                     const idToken = liff.getIDToken();
                     if (idToken) {
                         const decoded = liff.getDecodedIDToken();
+                        console.log('Decoded ID Token:', decoded);
                         email = decoded.email || '';
                     }
+                    
+                    // ถ้ายังไม่มีอีเมล ลองใช้ getProfile
+                    if (!email) {
+                        const lineProfile = await liff.getProfile();
+                        // บางครั้งอีเมลอาจอยู่ในข้อมูลโปรไฟล์
+                        email = lineProfile.email || '';
+                    }
                 } catch (e) {
-                    console.log('Cannot get email:', e);
+                    console.log('Cannot get email from LINE:', e);
                 }
+                
+                console.log('LINE Login - Email:', email);
                 
                 const result = await callAPI('login', {
                     uid: profile.userId,
@@ -2119,7 +2171,7 @@
         }
 
         // =============================================
-        // User Interface Functions
+        // User Interface Functions - แก้ไขการแสดงอีเมล
         // =============================================
         function updateUserUI(user) {
             document.getElementById('loginScreen').classList.add('hidden');
@@ -2129,6 +2181,15 @@
             
             document.getElementById('userName').textContent = user.displayName;
             document.getElementById('userLineId').textContent = user.lineId;
+            
+            // แก้ไข: แสดงอีเมลถ้ามี
+            const userEmailElement = document.getElementById('userEmail');
+            if (user.email) {
+                userEmailElement.textContent = user.email;
+                userEmailElement.classList.remove('hidden');
+            } else {
+                userEmailElement.classList.add('hidden');
+            }
             
             const roleText = user.role === 'admin' ? 'แอดมิน' : 
                             user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
@@ -3440,11 +3501,25 @@
                     showLoading();
                     
                     const profile = await liff.getProfile();
+                    
+                    // ดึงอีเมลจาก LINE
+                    let email = '';
+                    try {
+                        const idToken = liff.getIDToken();
+                        if (idToken) {
+                            const decoded = liff.getDecodedIDToken();
+                            email = decoded.email || '';
+                        }
+                    } catch (e) {
+                        console.log('Cannot get email:', e);
+                    }
+                    
                     const result = await callAPI('login', {
                         uid: profile.userId,
                         lineId: profile.userId,
                         displayName: profile.displayName,
-                        pictureUrl: profile.pictureUrl || ''
+                        pictureUrl: profile.pictureUrl || '',
+                        email: email
                     });
                     
                     if (result.success) {
