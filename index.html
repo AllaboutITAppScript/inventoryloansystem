@@ -1312,8 +1312,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -2074,32 +2073,41 @@
                 document.getElementById('uploadProgress').classList.remove('hidden');
                 document.getElementById('uploadError').classList.add('hidden');
                 
-                const formData = new FormData();
-                formData.append('action', 'uploadImage');
-                formData.append('uid', currentUser.uid);
-                formData.append('image', selectedImageFile);
+                // แปลงรูปภาพเป็น Base64
+                const reader = new FileReader();
+                const base64Promise = new Promise((resolve) => {
+                    reader.onload = function(e) {
+                        const base64String = e.target.result.split(',')[1];
+                        resolve(base64String);
+                    };
+                });
+                reader.readAsDataURL(selectedImageFile);
+                const base64Image = await base64Promise;
                 
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    body: formData
+                // ส่งรูปภาพไปที่ API
+                const result = await callAPI('uploadImage', {
+                    fileName: selectedImageFile.name,
+                    fileType: selectedImageFile.type,
+                    imageData: base64Image,
+                    uid: currentUser?.uid || 'unknown'
                 });
                 
-                const result = await response.json();
                 hideLoading();
                 document.getElementById('uploadProgress').classList.add('hidden');
                 
-                if (result.success) {
+                if (result.success && result.imageUrl) {
                     return { success: true, url: result.imageUrl };
                 } else {
-                    document.getElementById('uploadError').textContent = result.error;
+                    const errorMsg = result.error || 'ไม่สามารถอัพโหลดรูปภาพได้';
+                    document.getElementById('uploadError').textContent = errorMsg;
                     document.getElementById('uploadError').classList.remove('hidden');
-                    return { success: false, error: result.error };
+                    return { success: false, error: errorMsg };
                 }
                 
             } catch (error) {
                 hideLoading();
                 document.getElementById('uploadProgress').classList.add('hidden');
-                document.getElementById('uploadError').textContent = 'เกิดข้อผิดพลาดในการอัพโหลด';
+                document.getElementById('uploadError').textContent = 'เกิดข้อผิดพลาดในการอัพโหลด: ' + error.message;
                 document.getElementById('uploadError').classList.remove('hidden');
                 return { success: false, error: error.message };
             }
@@ -2115,8 +2123,15 @@
                 const params = new URLSearchParams({
                     action: action,
                     uid: currentUser?.uid || '',
-                    ...data
+                    timestamp: Date.now().toString()
                 });
+                
+                // เพิ่มข้อมูลอื่นๆ
+                for (const [key, value] of Object.entries(data)) {
+                    if (value !== null && value !== undefined) {
+                        params.append(key, value);
+                    }
+                }
                 
                 console.log('Calling API:', action, data);
                 
@@ -2664,6 +2679,8 @@
                 } else if (status === 'rejected') {
                     statusClass = 'status-rejected';
                     statusText = 'ถูกปฏิเสธ';
+                    actions = `<span class="text-sm text-gray-500">-</span>`;
+                } else if (status === 'returned') {
                     actions = `<span class="text-sm text-gray-500">-</span>`;
                 } else if (status === 'returned') {
                     actions = `<span class="text-sm text-gray-500">-</span>`;
