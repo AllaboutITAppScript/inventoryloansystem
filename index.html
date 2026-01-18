@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/x-icon" href="https://developers.line.biz/images/icons/docs/light/hover/mini.svg">
     <title>ระบบยืมคืนออนไลน์</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -141,6 +140,14 @@
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
             animation: pulse 2s infinite;
+        }
+        .status-active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .status-inactive {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
         }
         @keyframes pulse {
             0% { opacity: 1; }
@@ -306,6 +313,29 @@
             background: rgba(255, 255, 255, 0.03) !important;
             cursor: not-allowed !important;
         }
+        .image-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -368,6 +398,7 @@
                                     <span id="userRoleBadge" class="badge-user text-xs"></span>
                                 </div>
                                 <div id="userLineId" class="text-xs text-gray-400"></div>
+                                <div id="userEmail" class="text-xs text-gray-500 hidden"></div>
                             </div>
                             <button onclick="logout()" class="btn-danger text-sm">
                                 <i class="fas fa-sign-out-alt"></i>
@@ -409,6 +440,17 @@
         <div id="appScreen" class="hidden">
             <!-- Dashboard -->
             <div id="dashboard">
+                <!-- Status Alert for Inactive Users -->
+                <div id="inactiveAlert" class="hidden dark-card p-4 mb-6 border-l-4 border-yellow-500 bg-yellow-900/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 text-xl mr-3"></i>
+                        <div>
+                            <p class="font-bold text-yellow-300">บัญชีของคุณอยู่ในสถานะไม่ใช้งาน</p>
+                            <p class="text-yellow-200 text-sm mt-1">กรุณาติดต่อผู้ดูแลระบบเพื่อเปิดใช้งานบัญชี</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
                     <div>
                         <h2 class="text-3xl font-bold">
@@ -417,7 +459,7 @@
                         <p class="text-gray-400 mt-2" id="welcomeMessage"></p>
                     </div>
                     <div class="flex flex-wrap gap-2 mt-4 lg:mt-0">
-                        <button onclick="showSection('browseItems')" class="btn-primary">
+                        <button onclick="showSection('browseItems')" class="btn-primary" id="browseItemsBtn">
                             <i class="fas fa-boxes mr-2"></i>ยืมสิ่งของ
                         </button>
                         <button onclick="showSection('myBorrowings')" class="btn-purple">
@@ -510,7 +552,8 @@
                         </h3>
                         <div class="space-y-3">
                             <button onclick="showSection('browseItems')" 
-                                    class="w-full p-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl hover:from-blue-900/30 hover:to-purple-900/30 transition text-left border border-gray-800">
+                                    class="w-full p-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl hover:from-blue-900/30 hover:to-purple-900/30 transition text-left border border-gray-800"
+                                    id="quickBrowseBtn">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-3">
                                         <div class="w-10 h-10 rounded-lg bg-blue-900/30 flex items-center justify-center">
@@ -1172,11 +1215,12 @@
 
     <!-- Add/Edit Item Modal -->
     <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 modal-overlay">
-        <div class="dark-card p-6 w-full max-w-md border border-gray-800">
+        <div class="dark-card p-6 w-full max-w-2xl border border-gray-800 max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold mb-4" id="itemModalTitle">เพิ่มสิ่งของใหม่</h3>
             
             <div class="space-y-4">
                 <input type="hidden" id="itemIdInput">
+                
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">ชื่อสิ่งของ</label>
                     <input type="text" id="itemNameInput" class="input-dark w-full" placeholder="กรอกชื่อสิ่งของ">
@@ -1209,9 +1253,32 @@
                     </div>
                 </div>
                 
+                <!-- Image Upload Section -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">URL รูปภาพ (ไม่จำเป็น)</label>
-                    <input type="text" id="itemImageInput" class="input-dark w-full" placeholder="https://example.com/image.jpg">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">รูปภาพสิ่งของ</label>
+                    <div id="imageUploadArea" class="upload-area" onclick="document.getElementById('itemImageFile').click()">
+                        <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
+                        <div id="uploadPlaceholder">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ</p>
+                            <p class="text-gray-400 text-sm mt-1">รองรับไฟล์ PNG, JPG, GIF ขนาดไม่เกิน 5MB</p>
+                        </div>
+                        <div id="imagePreview" class="hidden">
+                            <img id="previewImage" class="image-preview mx-auto mb-2">
+                            <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
+                        </div>
+                    </div>
+                    <input type="hidden" id="itemImageInput" value="">
+                    <div id="uploadProgress" class="hidden mt-2">
+                        <div class="flex justify-between text-xs text-gray-400 mb-1">
+                            <span>กำลังอัพโหลด...</span>
+                            <span id="uploadPercent">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div id="uploadProgressBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div id="uploadError" class="hidden text-red-400 text-xs mt-2"></div>
                 </div>
             </div>
             
@@ -1245,7 +1312,8 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w-400&fit=crop&crop=faces'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
+            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
         };
 
         // =============================================
@@ -1264,6 +1332,7 @@
         let editItemId = null;
         let currentBotInfo = null;
         let debounceTimer = null;
+        let selectedImageFile = null;
 
         // =============================================
         // Utility Functions
@@ -1271,16 +1340,45 @@
         function formatDate(dateString) {
             if (!dateString) return '-';
             try {
-                const date = new Date(dateString);
+                let date;
+                
+                if (dateString.includes('/')) {
+                    const parts = dateString.split(/[/ :]/);
+                    if (parts.length >= 3) {
+                        const day = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1;
+                        const year = parseInt(parts[2]);
+                        date = new Date(year, month, day);
+                        
+                        if (parts.length >= 5) {
+                            const hour = parseInt(parts[3]) || 0;
+                            const minute = parseInt(parts[4]) || 0;
+                            date.setHours(hour, minute);
+                        }
+                    } else {
+                        date = new Date(dateString);
+                    }
+                } else if (dateString.includes('-')) {
+                    date = new Date(dateString);
+                } else {
+                    date = new Date(dateString);
+                }
+                
+                if (isNaN(date.getTime())) {
+                    return dateString;
+                }
+                
                 const options = { 
                     year: 'numeric', 
                     month: 'short', 
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    timeZone: 'Asia/Bangkok'
                 };
                 return date.toLocaleDateString('th-TH', options);
             } catch (e) {
+                console.error('Error formatting date:', e, 'Date string:', dateString);
                 return dateString;
             }
         }
@@ -1369,7 +1467,6 @@
             notificationArea.appendChild(notification);
             notificationArea.style.display = 'block';
 
-            // อัตโนมัติลบหลังจาก 5 วินาที
             setTimeout(() => {
                 removeNotification(notificationId);
             }, 5000);
@@ -1438,7 +1535,7 @@
         }
 
         // =============================================
-        // LINE Bot Functions - แก้ไขส่วนนี้
+        // LINE Bot Functions
         // =============================================
         function checkTokenFormat() {
             const tokenInput = document.getElementById('channelAccessToken');
@@ -1458,7 +1555,6 @@
             
             let isValidFormat = false;
             
-            // ตรวจสอบความยาวขั้นต่ำ
             if (token.length >= 30) {
                 isValidFormat = true;
             }
@@ -1469,7 +1565,6 @@
                 tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
                 tokenStatus.classList.remove('hidden');
                 
-                // รอ 1.5 วินาทีแล้วดึงข้อมูลบอทอัตโนมัติ
                 debounceTimer = setTimeout(() => {
                     autoDetectBotInfo();
                 }, 1500);
@@ -1567,7 +1662,6 @@
             }
         }
 
-        // แก้ไขฟังก์ชัน loadBotSettings ให้ดึงข้อมูลการตั้งค่าการแจ้งเตือนทั้งหมด
         async function loadBotSettings() {
             try {
                 showLoading();
@@ -1579,7 +1673,6 @@
                     const botNameInput = document.getElementById('botNameInput');
                     const botPictureUrl = document.getElementById('botPictureUrl');
                     
-                    // แก้ไข: ดึงค่าจากเซิร์ฟเวอร์
                     const tokenValue = data.settings.channel_access_token?.value || '';
                     const secretValue = data.settings.channel_secret?.value || '';
                     
@@ -1591,7 +1684,6 @@
                     
                     document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
                     
-                    // แก้ไข: โหลดการตั้งค่าการแจ้งเตือนทั้งหมด
                     const notificationEnabled = document.getElementById('notificationEnabled');
                     const notifyOnRequest = document.getElementById('notifyOnRequest');
                     const notifyOnApprove = document.getElementById('notifyOnApprove');
@@ -1600,7 +1692,6 @@
                     const notifyDueReminder = document.getElementById('notifyDueReminder');
                     const notifyOverdue = document.getElementById('notifyOverdue');
                     
-                    // ตั้งค่า checked ตามค่าจากเซิร์ฟเวอร์ (ค่าเริ่มต้นเป็น true ถ้าไม่มีข้อมูล)
                     notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
                     notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
                     notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
@@ -1609,7 +1700,6 @@
                     notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
                     notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
                     
-                    // ถ้ามี token ให้ตรวจสอบรูปแบบและอัปเดตสถานะ
                     if (tokenValue.trim()) {
                         setTimeout(() => {
                             checkTokenFormat();
@@ -1630,7 +1720,6 @@
                 console.error('Error loading bot settings:', error);
                 showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
                 
-                // แสดงค่าดีฟอลต์ถ้าโหลดไม่ได้
                 document.getElementById('notificationEnabled').checked = true;
                 document.getElementById('notifyOnRequest').checked = true;
                 document.getElementById('notifyOnApprove').checked = true;
@@ -1641,7 +1730,6 @@
             }
         }
 
-        // แก้ไขฟังก์ชัน saveBotSettings ให้บันทึกข้อมูลทั้งหมด
         async function saveBotSettings() {
             try {
                 const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
@@ -1677,7 +1765,6 @@
                     }
                 }
                 
-                // สร้างอ็อบเจ็กต์การตั้งค่าที่สมบูรณ์
                 const botSettings = {
                     channel_access_token: {
                         value: channelAccessToken,
@@ -1704,7 +1791,6 @@
                         description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
                         isActive: true
                     },
-                    // การตั้งค่าการแจ้งเตือนทั้งหมด
                     notification_enabled: {
                         value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
                         description: 'เปิดใช้งานการแจ้งเตือน',
@@ -1769,12 +1855,10 @@
                         });
                     }
                     
-                    // อัปเดตข้อมูลบอทอัตโนมัติหลังจากบันทึกสำเร็จ
                     setTimeout(() => {
                         autoDetectBotInfo();
                     }, 1000);
                     
-                    // แสดงการแจ้งเตือน
                     showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
                     
                 } else {
@@ -1945,6 +2029,83 @@
         }
 
         // =============================================
+        // Image Upload Functions
+        // =============================================
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF)');
+                return;
+            }
+            
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showMessage('error', 'ไฟล์มีขนาดใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 5MB');
+                return;
+            }
+            
+            selectedImageFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImage = document.getElementById('previewImage');
+                const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+                const imagePreview = document.getElementById('imagePreview');
+                
+                previewImage.src = e.target.result;
+                uploadPlaceholder.classList.add('hidden');
+                imagePreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadImageToDrive() {
+            if (!selectedImageFile) {
+                return { success: true, url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE };
+            }
+            
+            try {
+                showLoading();
+                document.getElementById('uploadProgress').classList.remove('hidden');
+                document.getElementById('uploadError').classList.add('hidden');
+                
+                const formData = new FormData();
+                formData.append('action', 'uploadImage');
+                formData.append('uid', currentUser.uid);
+                formData.append('image', selectedImageFile);
+                
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                hideLoading();
+                document.getElementById('uploadProgress').classList.add('hidden');
+                
+                if (result.success) {
+                    return { success: true, url: result.imageUrl };
+                } else {
+                    document.getElementById('uploadError').textContent = result.error;
+                    document.getElementById('uploadError').classList.remove('hidden');
+                    return { success: false, error: result.error };
+                }
+                
+            } catch (error) {
+                hideLoading();
+                document.getElementById('uploadProgress').classList.add('hidden');
+                document.getElementById('uploadError').textContent = 'เกิดข้อผิดพลาดในการอัพโหลด';
+                document.getElementById('uploadError').classList.remove('hidden');
+                return { success: false, error: error.message };
+            }
+        }
+
+        // =============================================
         // API Functions
         // =============================================
         async function callAPI(action, data = {}) {
@@ -2012,8 +2173,8 @@
                 }
                 
                 const profile = await liff.getProfile();
-                let email = '';
                 
+                let email = '';
                 try {
                     const idToken = liff.getIDToken();
                     if (idToken) {
@@ -2021,8 +2182,10 @@
                         email = decoded.email || '';
                     }
                 } catch (e) {
-                    console.log('Cannot get email:', e);
+                    console.log('Cannot get email from LINE:', e);
                 }
+                
+                console.log('LINE Login - Email:', email);
                 
                 const result = await callAPI('login', {
                     uid: profile.userId,
@@ -2130,6 +2293,14 @@
             document.getElementById('userName').textContent = user.displayName;
             document.getElementById('userLineId').textContent = user.lineId;
             
+            const userEmailElement = document.getElementById('userEmail');
+            if (user.email) {
+                userEmailElement.textContent = user.email;
+                userEmailElement.classList.remove('hidden');
+            } else {
+                userEmailElement.classList.add('hidden');
+            }
+            
             const roleText = user.role === 'admin' ? 'แอดมิน' : 
                             user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป';
             const roleClass = user.role === 'admin' ? 'badge-admin' : 
@@ -2145,6 +2316,20 @@
             
             if (user.role === 'admin' || user.role === 'superadmin') {
                 document.getElementById('adminPanelBtn').classList.remove('hidden');
+            }
+            
+            if (user.status === 'inactive') {
+                document.getElementById('inactiveAlert').classList.remove('hidden');
+                document.getElementById('browseItemsBtn').disabled = true;
+                document.getElementById('browseItemsBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').onclick = null;
+            } else {
+                document.getElementById('inactiveAlert').classList.add('hidden');
+                document.getElementById('browseItemsBtn').disabled = false;
+                document.getElementById('browseItemsBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').onclick = () => showSection('browseItems');
             }
             
             loadDashboardData();
@@ -2341,6 +2526,11 @@
         }
 
         async function borrowItem(itemId, itemName) {
+            if (currentUser.status === 'inactive') {
+                showMessage('error', 'บัญชีของคุณยังไม่ได้รับการเปิดใช้งาน', 'กรุณาติดต่อผู้ดูแลระบบเพื่อเปิดใช้งานบัญชี');
+                return;
+            }
+            
             try {
                 const { value: note } = await Swal.fire({
                     title: 'ยืนยันการยืม',
@@ -2924,6 +3114,21 @@
                     document.getElementById('itemLocationInput').value = item.location || '';
                     document.getElementById('itemImageInput').value = item.imageUrl || '';
                     
+                    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+                    const imagePreview = document.getElementById('imagePreview');
+                    const previewImage = document.getElementById('previewImage');
+                    
+                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE) {
+                        previewImage.src = item.imageUrl;
+                        uploadPlaceholder.classList.add('hidden');
+                        imagePreview.classList.remove('hidden');
+                    } else {
+                        uploadPlaceholder.classList.remove('hidden');
+                        imagePreview.classList.add('hidden');
+                    }
+                    
+                    selectedImageFile = null;
+                    
                     document.getElementById('addItemModal').classList.remove('hidden');
                 }
             } catch (error) {
@@ -2942,8 +3147,7 @@
                     description: document.getElementById('itemDescInput').value.trim(),
                     category: document.getElementById('itemCategoryInput').value,
                     quantity: parseInt(document.getElementById('itemQuantityInput').value),
-                    location: document.getElementById('itemLocationInput').value.trim(),
-                    imageUrl: document.getElementById('itemImageInput').value.trim() || CONFIG.DEFAULT_IMAGE
+                    location: document.getElementById('itemLocationInput').value.trim()
                 };
                 
                 if (!itemData.itemName) {
@@ -2955,6 +3159,20 @@
                     showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
                     return;
                 }
+                
+                // Upload image if selected
+                let imageUrl = document.getElementById('itemImageInput').value;
+                if (selectedImageFile) {
+                    const uploadResult = await uploadImageToDrive();
+                    if (uploadResult.success) {
+                        imageUrl = uploadResult.url;
+                    } else {
+                        showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
+                        return;
+                    }
+                }
+                
+                itemData.imageUrl = imageUrl || CONFIG.DEFAULT_IMAGE;
                 
                 const action = isEdit ? 'updateItem' : 'addItem';
                 const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
@@ -3050,13 +3268,24 @@
             document.getElementById('itemImageInput').value = '';
             document.getElementById('itemQuantityInput').value = '1';
             document.getElementById('itemCategoryInput').value = 'book';
+            
+            const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+            const imagePreview = document.getElementById('imagePreview');
+            uploadPlaceholder.classList.remove('hidden');
+            imagePreview.classList.add('hidden');
+            
+            selectedImageFile = null;
         }
 
         function closeItemModal() {
             document.getElementById('addItemModal').classList.add('hidden');
             editItemId = null;
+            selectedImageFile = null;
         }
 
+        // =============================================
+        // User Management Functions
+        // =============================================
         async function loadUsers() {
             try {
                 document.getElementById('usersLoading').classList.remove('hidden');
@@ -3105,8 +3334,8 @@
                                  user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
                             </span>
                             
-                            <span class="font-semibold ${user.status === 'active' ? 'text-green-400' : 'text-red-400'}">
-                                ${user.status === 'active' ? 'ใช้งาน' : 'ปิดการใช้งาน'}
+                            <span class="status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}">
+                                ${user.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
                             </span>
                         </div>
                     </div>
@@ -3131,8 +3360,26 @@
                     </div>
                     
                     <div class="flex justify-end space-x-3 mt-4">
+                        <button onclick="toggleUserStatus('${user.uid}', '${user.displayName}', '${user.status}')" 
+                                class="btn-${user.status === 'active' ? 'danger' : 'success'} text-sm">
+                            <i class="fas fa-${user.status === 'active' ? 'ban' : 'check-circle'} mr-2"></i>
+                            ${user.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+                        </button>
+                        
+                        ${user.role === 'user' ? `
+                            <button onclick="promoteToAdmin('${user.uid}', '${user.displayName}')" 
+                                    class="btn-primary text-sm">
+                                <i class="fas fa-user-shield mr-2"></i>ตั้งเป็นแอดมิน
+                            </button>
+                        ` : user.role === 'admin' && currentUser.role === 'superadmin' ? `
+                            <button onclick="demoteToUser('${user.uid}', '${user.displayName}')" 
+                                    class="btn-warning text-sm">
+                                <i class="fas fa-user mr-2"></i>ลดเป็นผู้ใช้ทั่วไป
+                            </button>
+                        ` : ''}
+                        
                         <button onclick="loadUserDetails('${user.uid}')" 
-                                class="btn-primary text-sm">
+                                class="btn-purple text-sm">
                             <i class="fas fa-eye mr-2"></i>ดูรายละเอียด
                         </button>
                     </div>
@@ -3163,20 +3410,236 @@
                 const roleFilter = document.getElementById('userRoleFilter').value;
                 const statusFilter = document.getElementById('userStatusFilter').value;
                 
-                const data = await callAPI('searchUsers', {
-                    searchTerm: searchTerm,
-                    roleFilter: roleFilter,
-                    statusFilter: statusFilter
-                });
+                let filteredUsers = [...currentAdminData.users];
                 
-                if (data.success) {
-                    currentAdminData.filteredUsers = data.users;
-                    renderUsers();
-                    updateUserStats(currentAdminData.filteredUsers);
+                if (searchTerm) {
+                    const searchLower = searchTerm.toLowerCase();
+                    filteredUsers = filteredUsers.filter(user => 
+                        user.displayName.toLowerCase().includes(searchLower) ||
+                        user.lineId.toLowerCase().includes(searchLower) ||
+                        (user.email && user.email.toLowerCase().includes(searchLower))
+                    );
                 }
+                
+                if (roleFilter !== 'all') {
+                    filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+                }
+                
+                if (statusFilter !== 'all') {
+                    filteredUsers = filteredUsers.filter(user => user.status === statusFilter);
+                }
+                
+                currentAdminData.filteredUsers = filteredUsers;
+                renderUsers();
+                updateUserStats(currentAdminData.filteredUsers);
+                
             } catch (error) {
                 showMessage('error', 'ไม่สามารถค้นหาได้', error.message);
             }
+        }
+
+        async function toggleUserStatus(userId, userName, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+            const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ปิดใช้งาน';
+            
+            Swal.fire({
+                title: `ยืนยัน${actionText}`,
+                html: `คุณต้องการ${actionText} <b>${userName}</b> ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: `ใช่, ${actionText}`,
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('updateUserStatus', {
+                            targetUserId: userId,
+                            status: newStatus
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: `${actionText}สำเร็จ!`,
+                                text: `${actionText} ${userName} เรียบร้อยแล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#1e293b',
+                                color: '#e2e8f0'
+                            });
+                            
+                            // Update local state
+                            const userIndex = currentAdminData.users.findIndex(u => u.uid === userId);
+                            if (userIndex !== -1) {
+                                currentAdminData.users[userIndex].status = newStatus;
+                            }
+                            
+                            const filteredIndex = currentAdminData.filteredUsers.findIndex(u => u.uid === userId);
+                            if (filteredIndex !== -1) {
+                                currentAdminData.filteredUsers[filteredIndex].status = newStatus;
+                            }
+                            
+                            renderUsers();
+                            
+                            notifications.push({
+                                type: 'success',
+                                icon: 'user-cog',
+                                title: `${actionText}ผู้ใช้`,
+                                message: `คุณได้${actionText} ${userName} แล้ว`,
+                                timestamp: new Date()
+                            });
+                            
+                            updateNotificationCount();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถเปลี่ยนสถานะได้',
+                            text: error.message,
+                            background: '#1e293b',
+                            color: '#e2e8f0'
+                        });
+                    }
+                }
+            });
+        }
+
+        async function promoteToAdmin(userId, userName) {
+            Swal.fire({
+                title: 'ยืนยันการตั้งค่าเป็นแอดมิน',
+                html: `คุณต้องการตั้งค่า <b>${userName}</b> เป็นแอดมินใช่หรือไม่?<br>
+                      <small>แอดมินสามารถจัดการระบบได้ แต่ไม่สามารถตั้งค่าแอดมินคนอื่นได้</small>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ตั้งเป็นแอดมิน',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('updateUserRole', {
+                            targetUserId: userId,
+                            role: 'admin'
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ตั้งแอดมินสำเร็จ!',
+                                text: `ตั้ง ${userName} เป็นแอดมินเรียบร้อยแล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#1e293b',
+                                color: '#e2e8f0'
+                            });
+                            
+                            // Update local state
+                            const userIndex = currentAdminData.users.findIndex(u => u.uid === userId);
+                            if (userIndex !== -1) {
+                                currentAdminData.users[userIndex].role = 'admin';
+                            }
+                            
+                            const filteredIndex = currentAdminData.filteredUsers.findIndex(u => u.uid === userId);
+                            if (filteredIndex !== -1) {
+                                currentAdminData.filteredUsers[filteredIndex].role = 'admin';
+                            }
+                            
+                            renderUsers();
+                            updateUserStats(currentAdminData.filteredUsers);
+                            
+                            notifications.push({
+                                type: 'success',
+                                icon: 'user-shield',
+                                title: 'ตั้งแอดมินสำเร็จ',
+                                message: `คุณได้ตั้ง ${userName} เป็นแอดมินแล้ว`,
+                                timestamp: new Date()
+                            });
+                            
+                            updateNotificationCount();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถตั้งแอดมินได้',
+                            text: error.message,
+                            background: '#1e293b',
+                            color: '#e2e8f0'
+                        });
+                    }
+                }
+            });
+        }
+
+        async function demoteToUser(userId, userName) {
+            Swal.fire({
+                title: 'ยืนยันการลดสถานะ',
+                html: `คุณต้องการลดสถานะ <b>${userName}</b> เป็นผู้ใช้ทั่วไปใช่หรือไม่?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ลดเป็นผู้ใช้ทั่วไป',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('updateUserRole', {
+                            targetUserId: userId,
+                            role: 'user'
+                        });
+                        
+                        if (result.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ลดสถานะสำเร็จ!',
+                                text: `ลด ${userName} เป็นผู้ใช้ทั่วไปเรียบร้อยแล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#1e293b',
+                                color: '#e2e8f0'
+                            });
+                            
+                            // Update local state
+                            const userIndex = currentAdminData.users.findIndex(u => u.uid === userId);
+                            if (userIndex !== -1) {
+                                currentAdminData.users[userIndex].role = 'user';
+                            }
+                            
+                            const filteredIndex = currentAdminData.filteredUsers.findIndex(u => u.uid === userId);
+                            if (filteredIndex !== -1) {
+                                currentAdminData.filteredUsers[filteredIndex].role = 'user';
+                            }
+                            
+                            renderUsers();
+                            updateUserStats(currentAdminData.filteredUsers);
+                            
+                            notifications.push({
+                                type: 'warning',
+                                icon: 'user',
+                                title: 'ลดสถานะแอดมิน',
+                                message: `คุณได้ลด ${userName} เป็นผู้ใช้ทั่วไปแล้ว`,
+                                timestamp: new Date()
+                            });
+                            
+                            updateNotificationCount();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถลดสถานะได้',
+                            text: error.message,
+                            background: '#1e293b',
+                            color: '#e2e8f0'
+                        });
+                    }
+                }
+            });
         }
 
         // =============================================
@@ -3210,8 +3673,8 @@
                                                 ${user.role === 'admin' ? 'แอดมิน' : 
                                                  user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
                                             </span>
-                                            <span class="font-semibold ${user.status === 'active' ? 'text-green-400' : 'text-red-400'}">
-                                                ${user.status === 'active' ? 'ใช้งาน' : 'ปิดการใช้งาน'}
+                                            <span class="status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}">
+                                                ${user.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
                                             </span>
                                         </div>
                                     </div>
@@ -3440,11 +3903,24 @@
                     showLoading();
                     
                     const profile = await liff.getProfile();
+                    
+                    let email = '';
+                    try {
+                        const idToken = liff.getIDToken();
+                        if (idToken) {
+                            const decoded = liff.getDecodedIDToken();
+                            email = decoded.email || '';
+                        }
+                    } catch (e) {
+                        console.log('Cannot get email:', e);
+                    }
+                    
                     const result = await callAPI('login', {
                         uid: profile.userId,
                         lineId: profile.userId,
                         displayName: profile.displayName,
-                        pictureUrl: profile.pictureUrl || ''
+                        pictureUrl: profile.pictureUrl || '',
+                        email: email
                     });
                     
                     if (result.success) {
@@ -3470,6 +3946,30 @@
                 notificationDropdown.classList.add('hidden');
             }
         });
+
+        // Drag and drop for image upload
+        const uploadArea = document.getElementById('imageUploadArea');
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    document.getElementById('itemImageFile').files = e.dataTransfer.files;
+                    handleImageUpload({ target: { files: e.dataTransfer.files } });
+                }
+            });
+        }
 
         // Start the app when page loads
         document.addEventListener('DOMContentLoaded', initializeApp);
