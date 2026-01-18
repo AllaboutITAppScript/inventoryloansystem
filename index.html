@@ -320,22 +320,6 @@
             border-radius: 8px;
             border: 2px solid rgba(255, 255, 255, 0.1);
         }
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .upload-area:hover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
-        }
-        .upload-area.dragover {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -1253,32 +1237,20 @@
                     </div>
                 </div>
                 
-                <!-- Image Upload Section -->
+                <!-- Image URL Input (แทนที่การอัพโหลด) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">รูปภาพสิ่งของ</label>
-                    <div id="imageUploadArea" class="upload-area" onclick="document.getElementById('itemImageFile').click()">
-                        <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
-                        <div id="uploadPlaceholder">
-                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                            <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ</p>
-                            <p class="text-gray-400 text-sm mt-1">รองรับไฟล์ PNG, JPG, GIF ขนาดไม่เกิน 5MB</p>
-                        </div>
-                        <div id="imagePreview" class="hidden">
-                            <img id="previewImage" class="image-preview mx-auto mb-2">
-                            <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
-                        </div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">URL รูปภาพ</label>
+                    <input type="text" id="itemImageUrlInput" class="input-dark w-full" 
+                           placeholder="https://example.com/image.jpg" 
+                           value="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces">
+                    <p class="text-xs text-gray-400 mt-1">
+                        กรอก URL รูปภาพของสิ่งของ (ถ้าไม่กรอกจะใช้รูปภาพเริ่มต้น)
+                    </p>
+                    <!-- Image Preview -->
+                    <div class="mt-4 flex justify-center">
+                        <img id="imagePreview" src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces" 
+                             class="image-preview hidden" alt="ภาพตัวอย่าง">
                     </div>
-                    <input type="hidden" id="itemImageInput" value="">
-                    <div id="uploadProgress" class="hidden mt-2">
-                        <div class="flex justify-between text-xs text-gray-400 mb-1">
-                            <span>กำลังอัพโหลด...</span>
-                            <span id="uploadPercent">0%</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                            <div id="uploadProgressBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div id="uploadError" class="hidden text-red-400 text-xs mt-2"></div>
                 </div>
             </div>
             
@@ -1312,8 +1284,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1332,11 +1303,9 @@
         let editItemId = null;
         let currentBotInfo = null;
         let debounceTimer = null;
-        let selectedImageFile = null;
-        let isImageChanged = false;
 
         // =============================================
-        // Utility Functions (แก้ไขแล้ว)
+        // Utility Functions
         // =============================================
         function formatDate(dateString) {
             if (!dateString) return '-';
@@ -1392,11 +1361,7 @@
             return categories[category] || category;
         }
 
-        function showMessage(type = 'info', title = '', text = '', timer = 3000) {
-            // ตรวจสอบและกำหนดค่า default สำหรับพารามิเตอร์
-            const validTypes = ['success', 'error', 'warning', 'info', 'question'];
-            const messageType = validTypes.includes(type) ? type : 'info';
-            
+        function showMessage(type, title, text, timer = 3000) {
             const Toast = Swal.mixin({
                 toast: true,
                 position: 'top-end',
@@ -1412,23 +1377,20 @@
             });
 
             Toast.fire({
-                icon: messageType,
-                title: title || '',
-                text: text || ''
+                icon: type,
+                title: title,
+                text: text
             });
         }
 
-        function showNotification(type = 'info', title = '', message = '') {
+        function showNotification(type, title, message) {
             const notificationId = 'notif_' + Date.now();
-            const validTypes = ['success', 'error', 'warning', 'info'];
-            const notifType = validTypes.includes(type) ? type : 'info';
-            
-            const icon = notifType === 'success' ? 'check-circle' : 
-                        notifType === 'error' ? 'exclamation-circle' : 
-                        notifType === 'warning' ? 'exclamation-triangle' : 'info-circle';
-            const color = notifType === 'success' ? 'border-green-500' : 
-                         notifType === 'error' ? 'border-red-500' : 
-                         notifType === 'warning' ? 'border-yellow-500' : 'border-blue-500';
+            const icon = type === 'success' ? 'check-circle' : 
+                        type === 'error' ? 'exclamation-circle' : 
+                        type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+            const color = type === 'success' ? 'border-green-500' : 
+                         type === 'error' ? 'border-red-500' : 
+                         type === 'warning' ? 'border-yellow-500' : 'border-blue-500';
 
             const notification = document.createElement('div');
             notification.id = notificationId;
@@ -1439,8 +1401,8 @@
                         <i class="fas fa-${icon} ${color.replace('border-', 'text-')} text-lg"></i>
                     </div>
                     <div class="ml-3">
-                        <p class="text-sm font-medium">${title || ''}</p>
-                        <p class="text-sm text-gray-400 mt-1">${message || ''}</p>
+                        <p class="text-sm font-medium">${title}</p>
+                        <p class="text-sm text-gray-400 mt-1">${message}</p>
                     </div>
                     <button onclick="removeNotification('${notificationId}')" class="ml-auto text-gray-500 hover:text-gray-300">
                         <i class="fas fa-times"></i>
@@ -1449,14 +1411,12 @@
             `;
 
             const notificationArea = document.getElementById('notificationArea');
-            if (notificationArea) {
-                notificationArea.appendChild(notification);
-                notificationArea.style.display = 'block';
+            notificationArea.appendChild(notification);
+            notificationArea.style.display = 'block';
 
-                setTimeout(() => {
-                    removeNotification(notificationId);
-                }, 5000);
-            }
+            setTimeout(() => {
+                removeNotification(notificationId);
+            }, 5000);
         }
 
         function removeNotification(id) {
@@ -1464,7 +1424,7 @@
             if (element) {
                 element.remove();
                 const notificationArea = document.getElementById('notificationArea');
-                if (notificationArea && notificationArea.children.length === 0) {
+                if (notificationArea.children.length === 0) {
                     notificationArea.style.display = 'none';
                 }
             }
@@ -1505,10 +1465,8 @@
             });
             
             const activeTab = document.getElementById(`${tabId}Tab`);
-            if (activeTab) {
-                activeTab.classList.add('tab-active', 'text-white', 'bg-gradient-to-r', 'from-blue-500', 'to-purple-600');
-                activeTab.classList.remove('hover:bg-gray-800/50');
-            }
+            activeTab.classList.add('tab-active', 'text-white', 'bg-gradient-to-r', 'from-blue-500', 'to-purple-600');
+            activeTab.classList.remove('hover:bg-gray-800/50');
             
             if (tabId === 'pendingRequests') {
                 loadPendingRequests();
@@ -1524,50 +1482,23 @@
         }
 
         // =============================================
-        // API Functions (แก้ไขแล้ว)
+        // API Functions
         // =============================================
-        async function callAPI(action, data = {}, isFormData = false) {
+        async function callAPI(action, data = {}) {
             try {
                 console.log('Calling API:', action, data);
                 
-                let options = {
-                    method: 'POST'
-                };
-                
-                if (isFormData) {
-                    // สำหรับการอัพโหลดไฟล์
-                    const formData = new FormData();
-                    formData.append('action', action);
-                    formData.append('uid', currentUser?.uid || '');
-                    
-                    // เพิ่มข้อมูลทั้งหมดลงใน FormData
-                    Object.keys(data).forEach(key => {
-                        if (key !== 'imageFile') {
-                            formData.append(key, data[key]);
-                        }
-                    });
-                    
-                    // เพิ่มไฟล์รูปภาพถ้ามี
-                    if (data.imageFile) {
-                        formData.append('image', data.imageFile);
-                    }
-                    
-                    options.body = formData;
-                    
-                } else {
-                    // สำหรับข้อมูลปกติ
-                    options.headers = {
+                const options = {
+                    method: 'POST',
+                    headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                    };
-                    
-                    const params = new URLSearchParams({
+                    },
+                    body: new URLSearchParams({
                         action: action,
                         uid: currentUser?.uid || '',
                         ...data
-                    });
-                    
-                    options.body = params;
-                }
+                    })
+                };
                 
                 const response = await fetch(CONFIG.API_URL, options);
                 
@@ -1599,131 +1530,7 @@
         }
 
         // =============================================
-        // Image Upload Functions
-        // =============================================
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-            if (!validTypes.includes(file.type)) {
-                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF)');
-                resetImageInput();
-                return;
-            }
-            
-            // Validate file size (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                showMessage('error', 'ไฟล์มีขนาดใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 5MB');
-                resetImageInput();
-                return;
-            }
-            
-            selectedImageFile = file;
-            isImageChanged = true;
-            
-            // Show preview
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const previewImage = document.getElementById('previewImage');
-                const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-                const imagePreview = document.getElementById('imagePreview');
-                
-                if (previewImage && uploadPlaceholder && imagePreview) {
-                    previewImage.src = e.target.result;
-                    uploadPlaceholder.classList.add('hidden');
-                    imagePreview.classList.remove('hidden');
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function resetImageInput() {
-            const fileInput = document.getElementById('itemImageFile');
-            if (fileInput) {
-                fileInput.value = '';
-            }
-            selectedImageFile = null;
-            isImageChanged = false;
-            
-            const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-            const imagePreview = document.getElementById('imagePreview');
-            if (uploadPlaceholder && imagePreview) {
-                uploadPlaceholder.classList.remove('hidden');
-                imagePreview.classList.add('hidden');
-            }
-        }
-
-        async function uploadImage() {
-            if (!selectedImageFile) {
-                const imageInput = document.getElementById('itemImageInput');
-                return { success: true, imageUrl: imageInput ? imageInput.value || CONFIG.DEFAULT_IMAGE : CONFIG.DEFAULT_IMAGE };
-            }
-            
-            try {
-                showLoading();
-                const uploadProgress = document.getElementById('uploadProgress');
-                const uploadProgressBar = document.getElementById('uploadProgressBar');
-                const uploadPercent = document.getElementById('uploadPercent');
-                const uploadError = document.getElementById('uploadError');
-                
-                if (uploadProgress) uploadProgress.classList.remove('hidden');
-                if (uploadError) uploadError.classList.add('hidden');
-                if (uploadProgressBar) uploadProgressBar.style.width = '0%';
-                if (uploadPercent) uploadPercent.textContent = '0%';
-                
-                // สร้าง FormData สำหรับอัพโหลด
-                const formData = new FormData();
-                formData.append('action', 'uploadImage');
-                formData.append('uid', currentUser ? currentUser.uid : '');
-                formData.append('image', selectedImageFile);
-                
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Upload failed: ${response.status}`);
-                }
-                
-                const result = await response.json();
-                hideLoading();
-                
-                if (result.success) {
-                    if (uploadProgressBar) uploadProgressBar.style.width = '100%';
-                    if (uploadPercent) uploadPercent.textContent = '100%';
-                    
-                    setTimeout(() => {
-                        if (uploadProgress) uploadProgress.classList.add('hidden');
-                    }, 1000);
-                    
-                    return { 
-                        success: true, 
-                        imageUrl: result.imageUrl || CONFIG.DEFAULT_IMAGE 
-                    };
-                } else {
-                    if (uploadError) {
-                        uploadError.textContent = result.error || 'อัพโหลดล้มเหลว';
-                        uploadError.classList.remove('hidden');
-                    }
-                    return { success: false, error: result.error };
-                }
-                
-            } catch (error) {
-                hideLoading();
-                const uploadError = document.getElementById('uploadError');
-                if (uploadError) {
-                    uploadError.textContent = 'เกิดข้อผิดพลาดในการอัพโหลด: ' + error.message;
-                    uploadError.classList.remove('hidden');
-                }
-                return { success: false, error: error.message };
-            }
-        }
-
-        // =============================================
-        // Item Management Functions
+        // Item Management Functions (แก้ไข)
         // =============================================
         async function editItem(itemId) {
             try {
@@ -1735,11 +1542,8 @@
                     const item = result.item;
                     editItemId = itemId;
                     
-                    const modalTitle = document.getElementById('itemModalTitle');
-                    const saveBtn = document.getElementById('saveItemBtn');
-                    
-                    if (modalTitle) modalTitle.textContent = 'แก้ไขสิ่งของ';
-                    if (saveBtn) saveBtn.textContent = 'อัปเดต';
+                    document.getElementById('itemModalTitle').textContent = 'แก้ไขสิ่งของ';
+                    document.getElementById('saveItemBtn').textContent = 'อัปเดต';
                     
                     document.getElementById('itemIdInput').value = itemId;
                     document.getElementById('itemNameInput').value = item.itemName || '';
@@ -1747,26 +1551,12 @@
                     document.getElementById('itemCategoryInput').value = item.category || 'book';
                     document.getElementById('itemQuantityInput').value = item.quantity || 1;
                     document.getElementById('itemLocationInput').value = item.location || '';
-                    document.getElementById('itemImageInput').value = item.imageUrl || '';
+                    document.getElementById('itemImageUrlInput').value = item.imageUrl || CONFIG.DEFAULT_IMAGE;
                     
-                    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+                    // Show image preview
                     const imagePreview = document.getElementById('imagePreview');
-                    const previewImage = document.getElementById('previewImage');
-                    
-                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE) {
-                        if (previewImage) previewImage.src = item.imageUrl;
-                        if (uploadPlaceholder) uploadPlaceholder.classList.add('hidden');
-                        if (imagePreview) imagePreview.classList.remove('hidden');
-                    } else {
-                        if (uploadPlaceholder) uploadPlaceholder.classList.remove('hidden');
-                        if (imagePreview) imagePreview.classList.add('hidden');
-                    }
-                    
-                    // รีเซ็ตสถานะรูปภาพ
-                    selectedImageFile = null;
-                    isImageChanged = false;
-                    const fileInput = document.getElementById('itemImageFile');
-                    if (fileInput) fileInput.value = '';
+                    imagePreview.src = item.imageUrl || CONFIG.DEFAULT_IMAGE;
+                    imagePreview.classList.remove('hidden');
                     
                     document.getElementById('addItemModal').classList.remove('hidden');
                 }
@@ -1787,7 +1577,8 @@
                     description: document.getElementById('itemDescInput').value.trim(),
                     category: document.getElementById('itemCategoryInput').value,
                     quantity: parseInt(document.getElementById('itemQuantityInput').value),
-                    location: document.getElementById('itemLocationInput').value.trim()
+                    location: document.getElementById('itemLocationInput').value.trim(),
+                    imageUrl: document.getElementById('itemImageUrlInput').value.trim() || CONFIG.DEFAULT_IMAGE
                 };
                 
                 if (!itemData.itemName) {
@@ -1800,40 +1591,6 @@
                     hideLoading();
                     showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
                     return;
-                }
-                
-                // ถ้าเป็นการแก้ไขและมีรูปภาพใหม่
-                const imageInput = document.getElementById('itemImageInput');
-                let imageUrl = imageInput ? imageInput.value : '';
-                if (isEdit && isImageChanged && selectedImageFile) {
-                    const uploadResult = await uploadImage();
-                    if (uploadResult.success) {
-                        imageUrl = uploadResult.imageUrl;
-                        itemData.imageUrl = imageUrl;
-                        itemData.updateImage = true;
-                    } else {
-                        hideLoading();
-                        showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
-                        return;
-                    }
-                } else if (isEdit && !isImageChanged) {
-                    // ถ้าเป็นการแก้ไขแต่ไม่เปลี่ยนรูป
-                    itemData.updateImage = false;
-                    itemData.imageUrl = imageUrl;
-                } else if (!isEdit) {
-                    // ถ้าเป็นการเพิ่มใหม่
-                    if (selectedImageFile) {
-                        const uploadResult = await uploadImage();
-                        if (uploadResult.success) {
-                            itemData.imageUrl = uploadResult.imageUrl;
-                        } else {
-                            hideLoading();
-                            showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
-                            return;
-                        }
-                    } else {
-                        itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
-                    }
                 }
                 
                 // เพิ่ม itemId ถ้าเป็นการแก้ไข
@@ -1882,12 +1639,8 @@
 
         function openAddItemModal() {
             editItemId = null;
-            const modalTitle = document.getElementById('itemModalTitle');
-            const saveBtn = document.getElementById('saveItemBtn');
-            
-            if (modalTitle) modalTitle.textContent = 'เพิ่มสิ่งของใหม่';
-            if (saveBtn) saveBtn.textContent = 'บันทึก';
-            
+            document.getElementById('itemModalTitle').textContent = 'เพิ่มสิ่งของใหม่';
+            document.getElementById('saveItemBtn').textContent = 'บันทึก';
             document.getElementById('addItemModal').classList.remove('hidden');
             
             // รีเซ็ตฟอร์มทั้งหมด
@@ -1895,38 +1648,19 @@
             document.getElementById('itemNameInput').value = '';
             document.getElementById('itemDescInput').value = '';
             document.getElementById('itemLocationInput').value = '';
-            const imageInput = document.getElementById('itemImageInput');
-            if (imageInput) imageInput.value = '';
+            document.getElementById('itemImageUrlInput').value = CONFIG.DEFAULT_IMAGE;
             document.getElementById('itemQuantityInput').value = '1';
             document.getElementById('itemCategoryInput').value = 'book';
             
-            const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+            // Show image preview
             const imagePreview = document.getElementById('imagePreview');
-            if (uploadPlaceholder) uploadPlaceholder.classList.remove('hidden');
-            if (imagePreview) imagePreview.classList.add('hidden');
-            
-            // รีเซ็ตสถานะรูปภาพ
-            selectedImageFile = null;
-            isImageChanged = false;
-            const fileInput = document.getElementById('itemImageFile');
-            if (fileInput) fileInput.value = '';
-            const uploadProgress = document.getElementById('uploadProgress');
-            if (uploadProgress) uploadProgress.classList.add('hidden');
-            const uploadError = document.getElementById('uploadError');
-            if (uploadError) uploadError.classList.add('hidden');
+            imagePreview.src = CONFIG.DEFAULT_IMAGE;
+            imagePreview.classList.remove('hidden');
         }
 
         function closeItemModal() {
             document.getElementById('addItemModal').classList.add('hidden');
             editItemId = null;
-            selectedImageFile = null;
-            isImageChanged = false;
-            const fileInput = document.getElementById('itemImageFile');
-            if (fileInput) fileInput.value = '';
-            const uploadProgress = document.getElementById('uploadProgress');
-            if (uploadProgress) uploadProgress.classList.add('hidden');
-            const uploadError = document.getElementById('uploadError');
-            if (uploadError) uploadError.classList.add('hidden');
         }
 
         // =============================================
@@ -2021,32 +1755,25 @@
                 const data = await callAPI('getDashboardStats');
                 
                 if (data.stats) {
-                    const totalItemsEl = document.getElementById('totalItems');
-                    const availableItemsEl = document.getElementById('availableItems');
-                    const borrowedItemsEl = document.getElementById('borrowedItems');
-                    const pendingItemsEl = document.getElementById('pendingItems');
-                    
-                    if (totalItemsEl) totalItemsEl.textContent = data.stats.totalItems || 0;
-                    if (availableItemsEl) availableItemsEl.textContent = data.stats.totalAvailable || 0;
-                    if (borrowedItemsEl) borrowedItemsEl.textContent = data.stats.totalBorrowed || 0;
-                    if (pendingItemsEl) pendingItemsEl.textContent = data.stats.pendingRequests || 0;
+                    document.getElementById('totalItems').textContent = data.stats.totalItems || 0;
+                    document.getElementById('availableItems').textContent = data.stats.totalAvailable || 0;
+                    document.getElementById('borrowedItems').textContent = data.stats.totalBorrowed || 0;
+                    document.getElementById('pendingItems').textContent = data.stats.pendingRequests || 0;
                 }
                 
                 if (data.popularItems && data.popularItems.length > 0) {
                     const popularContainer = document.getElementById('popularItems');
-                    if (popularContainer) {
-                        popularContainer.innerHTML = data.popularItems.slice(0, 5).map(item => `
-                            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-xl mb-2 hover:shadow-lg transition border border-gray-800">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 rounded-lg bg-blue-900/30 flex items-center justify-center">
-                                        <i class="fas fa-box text-blue-400"></i>
-                                    </div>
-                                    <span class="font-medium">${item.itemName}</span>
+                    popularContainer.innerHTML = data.popularItems.slice(0, 5).map(item => `
+                        <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-xl mb-2 hover:shadow-lg transition border border-gray-800">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-900/30 flex items-center justify-center">
+                                    <i class="fas fa-box text-blue-400"></i>
                                 </div>
-                                <span class="text-blue-400 font-bold">${item.borrowCount || 0} ครั้ง</span>
+                                <span class="font-medium">${item.itemName}</span>
                             </div>
-                        `).join('');
-                    }
+                            <span class="text-blue-400 font-bold">${item.borrowCount || 0} ครั้ง</span>
+                        </div>
+                    `).join('');
                 }
                 
             } catch (error) {
@@ -2058,15 +1785,10 @@
         // User Interface Functions
         // =============================================
         function updateUserUI(user) {
-            const loginScreen = document.getElementById('loginScreen');
-            const appScreen = document.getElementById('appScreen');
-            const authButtons = document.getElementById('authButtons');
-            const userInfo = document.getElementById('userInfo');
-            
-            if (loginScreen) loginScreen.classList.add('hidden');
-            if (appScreen) appScreen.classList.remove('hidden');
-            if (authButtons) authButtons.classList.add('hidden');
-            if (userInfo) userInfo.classList.remove('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            document.getElementById('authButtons').classList.add('hidden');
+            document.getElementById('userInfo').classList.remove('hidden');
             
             document.getElementById('userName').textContent = user.displayName;
             document.getElementById('userLineId').textContent = user.lineId;
@@ -2084,52 +1806,30 @@
             const roleClass = user.role === 'admin' ? 'badge-admin' : 
                             user.role === 'superadmin' ? 'badge-superadmin' : 'badge-user';
             
-            const userRoleBadge = document.getElementById('userRoleBadge');
-            if (userRoleBadge) {
-                userRoleBadge.textContent = roleText;
-                userRoleBadge.className = roleClass;
-            }
+            document.getElementById('userRoleBadge').textContent = roleText;
+            document.getElementById('userRoleBadge').className = roleClass;
             
             const avatarUrl = user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`;
-            const userAvatar = document.getElementById('userAvatar');
-            if (userAvatar) userAvatar.src = avatarUrl;
+            document.getElementById('userAvatar').src = avatarUrl;
             
-            const welcomeMessage = document.getElementById('welcomeMessage');
-            if (welcomeMessage) welcomeMessage.textContent = `ยินดีต้อนรับ, ${user.displayName}!`;
+            document.getElementById('welcomeMessage').textContent = `ยินดีต้อนรับ, ${user.displayName}!`;
             
-            const adminPanelBtn = document.getElementById('adminPanelBtn');
-            if (adminPanelBtn) {
-                if (user.role === 'admin' || user.role === 'superadmin') {
-                    adminPanelBtn.classList.remove('hidden');
-                } else {
-                    adminPanelBtn.classList.add('hidden');
-                }
+            if (user.role === 'admin' || user.role === 'superadmin') {
+                document.getElementById('adminPanelBtn').classList.remove('hidden');
             }
             
-            const inactiveAlert = document.getElementById('inactiveAlert');
-            const browseItemsBtn = document.getElementById('browseItemsBtn');
-            const quickBrowseBtn = document.getElementById('quickBrowseBtn');
-            
             if (user.status === 'inactive') {
-                if (inactiveAlert) inactiveAlert.classList.remove('hidden');
-                if (browseItemsBtn) {
-                    browseItemsBtn.disabled = true;
-                    browseItemsBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                }
-                if (quickBrowseBtn) {
-                    quickBrowseBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    quickBrowseBtn.onclick = null;
-                }
+                document.getElementById('inactiveAlert').classList.remove('hidden');
+                document.getElementById('browseItemsBtn').disabled = true;
+                document.getElementById('browseItemsBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').onclick = null;
             } else {
-                if (inactiveAlert) inactiveAlert.classList.add('hidden');
-                if (browseItemsBtn) {
-                    browseItemsBtn.disabled = false;
-                    browseItemsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-                if (quickBrowseBtn) {
-                    quickBrowseBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    quickBrowseBtn.onclick = () => showSection('browseItems');
-                }
+                document.getElementById('inactiveAlert').classList.add('hidden');
+                document.getElementById('browseItemsBtn').disabled = false;
+                document.getElementById('browseItemsBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('quickBrowseBtn').onclick = () => showSection('browseItems');
             }
             
             loadDashboardData();
@@ -2138,63 +1838,55 @@
         function updateNotificationCount() {
             const count = notifications.length;
             const badge = document.getElementById('notificationCount');
-            if (badge) {
-                if (count > 0) {
-                    badge.textContent = count > 99 ? '99+' : count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
             }
         }
 
         function toggleTheme() {
             const themeIcon = document.querySelector('button[onclick="toggleTheme()"] i');
-            if (themeIcon) {
-                if (themeIcon.classList.contains('fa-moon')) {
-                    themeIcon.classList.remove('fa-moon', 'text-yellow-400');
-                    themeIcon.classList.add('fa-sun', 'text-yellow-300');
-                    document.body.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
-                    document.body.style.color = '#1e293b';
-                    document.querySelectorAll('.dark-card').forEach(el => {
-                        el.classList.remove('dark-card');
-                        el.classList.add('glass-card');
-                    });
-                    document.querySelectorAll('.input-dark').forEach(el => {
-                        el.classList.remove('input-dark');
-                        el.classList.add('input-glass');
-                    });
-                } else {
-                    themeIcon.classList.remove('fa-sun', 'text-yellow-300');
-                    themeIcon.classList.add('fa-moon', 'text-yellow-400');
-                    document.body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
-                    document.body.style.color = '#e2e8f0';
-                    document.querySelectorAll('.glass-card').forEach(el => {
-                        el.classList.remove('glass-card');
-                        el.classList.add('dark-card');
-                    });
-                    document.querySelectorAll('.input-glass').forEach(el => {
-                        el.classList.remove('input-glass');
-                        el.classList.add('input-dark');
-                    });
-                }
+            if (themeIcon.classList.contains('fa-moon')) {
+                themeIcon.classList.remove('fa-moon', 'text-yellow-400');
+                themeIcon.classList.add('fa-sun', 'text-yellow-300');
+                document.body.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
+                document.body.style.color = '#1e293b';
+                document.querySelectorAll('.dark-card').forEach(el => {
+                    el.classList.remove('dark-card');
+                    el.classList.add('glass-card');
+                });
+                document.querySelectorAll('.input-dark').forEach(el => {
+                    el.classList.remove('input-dark');
+                    el.classList.add('input-glass');
+                });
+            } else {
+                themeIcon.classList.remove('fa-sun', 'text-yellow-300');
+                themeIcon.classList.add('fa-moon', 'text-yellow-400');
+                document.body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
+                document.body.style.color = '#e2e8f0';
+                document.querySelectorAll('.glass-card').forEach(el => {
+                    el.classList.remove('glass-card');
+                    el.classList.add('dark-card');
+                });
+                document.querySelectorAll('.input-glass').forEach(el => {
+                    el.classList.remove('input-glass');
+                    el.classList.add('input-dark');
+                });
             }
         }
 
         function toggleNotifications() {
             const dropdown = document.getElementById('notificationDropdown');
-            if (dropdown) {
-                dropdown.classList.toggle('hidden');
-                if (!dropdown.classList.contains('hidden')) {
-                    loadNotifications();
-                }
+            dropdown.classList.toggle('hidden');
+            if (!dropdown.classList.contains('hidden')) {
+                loadNotifications();
             }
         }
 
         function loadNotifications() {
             const notificationList = document.getElementById('notificationList');
-            if (!notificationList) return;
-            
             if (notifications.length === 0) {
                 notificationList.innerHTML = `
                     <div class="p-4 text-center">
@@ -2209,11 +1901,11 @@
                 <div class="p-4 border-b border-gray-800 hover:bg-gray-800/30 transition">
                     <div class="flex items-start">
                         <div class="flex-shrink-0">
-                            <i class="fas fa-${notif.icon || 'bell'} text-${notif.type || 'info'}-400"></i>
+                            <i class="fas fa-${notif.icon || 'bell'} text-${notif.type}-400"></i>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium">${notif.title || ''}</p>
-                            <p class="text-sm text-gray-400 mt-1">${notif.message || ''}</p>
+                            <p class="text-sm font-medium">${notif.title}</p>
+                            <p class="text-sm text-gray-400 mt-1">${notif.message}</p>
                             <p class="text-xs text-gray-500 mt-1">${formatTime(notif.timestamp)}</p>
                         </div>
                     </div>
@@ -2226,62 +1918,49 @@
         // =============================================
         async function loadItems() {
             try {
-                const searchBox = document.getElementById('searchBox');
-                const categoryFilter = document.getElementById('categoryFilter');
-                const itemsLoading = document.getElementById('itemsLoading');
-                const itemsGrid = document.getElementById('itemsGrid');
-                const noItems = document.getElementById('noItems');
+                const search = document.getElementById('searchBox').value;
+                const category = document.getElementById('categoryFilter').value;
                 
-                if (itemsLoading) itemsLoading.classList.remove('hidden');
-                if (itemsGrid) itemsGrid.innerHTML = '';
-                if (noItems) noItems.classList.add('hidden');
-                
-                const search = searchBox ? searchBox.value : '';
-                const category = categoryFilter ? categoryFilter.value : 'all';
+                document.getElementById('itemsLoading').classList.remove('hidden');
+                document.getElementById('itemsGrid').innerHTML = '';
+                document.getElementById('noItems').classList.add('hidden');
                 
                 const data = await callAPI('getItems', {
                     category: category === 'all' ? '' : category,
                     search: search
                 });
                 
-                if (itemsLoading) itemsLoading.classList.add('hidden');
+                document.getElementById('itemsLoading').classList.add('hidden');
                 
                 if (data.items && data.items.length > 0) {
                     currentItems = data.items;
                     renderItems();
                 } else {
-                    if (noItems) noItems.classList.remove('hidden');
+                    document.getElementById('noItems').classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('Error loading items:', error);
-                const itemsLoading = document.getElementById('itemsLoading');
-                const noItems = document.getElementById('noItems');
-                if (itemsLoading) itemsLoading.classList.add('hidden');
-                if (noItems) noItems.classList.remove('hidden');
+                document.getElementById('itemsLoading').classList.add('hidden');
+                document.getElementById('noItems').classList.remove('hidden');
             }
         }
 
         function renderItems() {
             const container = document.getElementById('itemsGrid');
-            const statusFilter = document.getElementById('statusFilter');
-            const noItems = document.getElementById('noItems');
-            
-            if (!container) return;
-            
-            const filterValue = statusFilter ? statusFilter.value : 'all';
+            const statusFilter = document.getElementById('statusFilter').value;
             
             const filteredItems = currentItems.filter(item => {
-                if (filterValue === 'available') {
+                if (statusFilter === 'available') {
                     return item.available > 0;
-                } else if (filterValue === 'unavailable') {
+                } else if (statusFilter === 'unavailable') {
                     return item.available === 0;
                 }
                 return true;
             });
             
             if (filteredItems.length === 0) {
-                if (noItems) noItems.classList.remove('hidden');
+                document.getElementById('noItems').classList.remove('hidden');
                 return;
             }
             
@@ -2331,7 +2010,7 @@
                 </div>
             `).join('');
             
-            if (noItems) noItems.classList.add('hidden');
+            document.getElementById('noItems').classList.add('hidden');
         }
 
         function searchItems() {
@@ -2343,7 +2022,7 @@
         }
 
         async function borrowItem(itemId, itemName) {
-            if (!currentUser || currentUser.status === 'inactive') {
+            if (currentUser.status === 'inactive') {
                 showMessage('error', 'บัญชีของคุณยังไม่ได้รับการเปิดใช้งาน', 'กรุณาติดต่อผู้ดูแลระบบเพื่อเปิดใช้งานบัญชี');
                 return;
             }
@@ -2421,39 +2100,30 @@
         // =============================================
         async function loadMyBorrowings() {
             try {
-                const borrowingsLoading = document.getElementById('borrowingsLoading');
-                const borrowingsTable = document.getElementById('borrowingsTable');
-                const noBorrowings = document.getElementById('noBorrowings');
-                
-                if (borrowingsLoading) borrowingsLoading.classList.remove('hidden');
-                if (borrowingsTable) borrowingsTable.innerHTML = '';
-                if (noBorrowings) noBorrowings.classList.add('hidden');
+                document.getElementById('borrowingsLoading').classList.remove('hidden');
+                document.getElementById('borrowingsTable').innerHTML = '';
+                document.getElementById('noBorrowings').classList.add('hidden');
                 
                 const data = await callAPI('getMyBorrowings');
                 
-                if (borrowingsLoading) borrowingsLoading.classList.add('hidden');
+                document.getElementById('borrowingsLoading').classList.add('hidden');
                 
                 if (data.borrowings && data.borrowings.length > 0) {
                     currentBorrowings = data.borrowings;
                     renderBorrowings();
                 } else {
-                    if (noBorrowings) noBorrowings.classList.remove('hidden');
+                    document.getElementById('noBorrowings').classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('Error loading borrowings:', error);
-                const borrowingsLoading = document.getElementById('borrowingsLoading');
-                const noBorrowings = document.getElementById('noBorrowings');
-                if (borrowingsLoading) borrowingsLoading.classList.add('hidden');
-                if (noBorrowings) noBorrowings.classList.remove('hidden');
+                document.getElementById('borrowingsLoading').classList.add('hidden');
+                document.getElementById('noBorrowings').classList.remove('hidden');
             }
         }
 
         function renderBorrowings() {
             const tableBody = document.getElementById('borrowingsTable');
-            const noBorrowings = document.getElementById('noBorrowings');
-            
-            if (!tableBody) return;
             
             tableBody.innerHTML = currentBorrowings.map(borrow => {
                 const isOverdue = borrow.isOverdue;
@@ -2510,7 +2180,7 @@
                 `;
             }).join('');
             
-            if (noBorrowings) noBorrowings.classList.add('hidden');
+            document.getElementById('noBorrowings').classList.add('hidden');
         }
 
         async function returnItem(borrowId, itemName) {
@@ -2640,42 +2310,34 @@
         // =============================================
         async function loadPendingRequests() {
             try {
-                if (!currentUser || !(currentUser.role === 'admin' || currentUser.role === 'superadmin')) return;
+                if (!(currentUser.role === 'admin' || currentUser.role === 'superadmin')) return;
                 
-                const pendingRequestsLoading = document.getElementById('pendingRequestsLoading');
-                const pendingRequestsList = document.getElementById('pendingRequestsList');
-                const noPendingRequests = document.getElementById('noPendingRequests');
-                const pendingCountBadge = document.getElementById('pendingCountBadge');
-                
-                if (pendingRequestsLoading) pendingRequestsLoading.classList.remove('hidden');
-                if (pendingRequestsList) pendingRequestsList.innerHTML = '';
-                if (noPendingRequests) noPendingRequests.classList.add('hidden');
+                document.getElementById('pendingRequestsLoading').classList.remove('hidden');
+                document.getElementById('pendingRequestsList').innerHTML = '';
+                document.getElementById('noPendingRequests').classList.add('hidden');
                 
                 const data = await callAPI('getPendingRequests');
                 
-                if (pendingRequestsLoading) pendingRequestsLoading.classList.add('hidden');
+                document.getElementById('pendingRequestsLoading').classList.add('hidden');
                 
                 if (data.requests && data.requests.length > 0) {
                     currentAdminData.pendingRequests = data.requests;
                     renderPendingRequests();
-                    if (pendingCountBadge) pendingCountBadge.textContent = data.requests.length;
+                    document.getElementById('pendingCountBadge').textContent = data.requests.length;
                 } else {
-                    if (noPendingRequests) noPendingRequests.classList.remove('hidden');
-                    if (pendingCountBadge) pendingCountBadge.textContent = '0';
+                    document.getElementById('noPendingRequests').classList.remove('hidden');
+                    document.getElementById('pendingCountBadge').textContent = '0';
                 }
                 
             } catch (error) {
                 console.error('Error loading pending requests:', error);
-                const pendingRequestsLoading = document.getElementById('pendingRequestsLoading');
-                const noPendingRequests = document.getElementById('noPendingRequests');
-                if (pendingRequestsLoading) pendingRequestsLoading.classList.add('hidden');
-                if (noPendingRequests) noPendingRequests.classList.remove('hidden');
+                document.getElementById('pendingRequestsLoading').classList.add('hidden');
+                document.getElementById('noPendingRequests').classList.remove('hidden');
             }
         }
 
         function renderPendingRequests() {
             const container = document.getElementById('pendingRequestsList');
-            if (!container) return;
             
             container.innerHTML = currentAdminData.pendingRequests.map(request => `
                 <div class="dark-card p-6 mb-4 border border-gray-800">
@@ -2847,13 +2509,10 @@
             try {
                 const data = await callAPI('getItemsForManagement');
                 
-                const manageItemsList = document.getElementById('manageItemsList');
-                if (!manageItemsList) return;
-                
                 if (data.items && data.items.length > 0) {
                     renderItemsForManagement(data.items);
                 } else {
-                    manageItemsList.innerHTML = `
+                    document.getElementById('manageItemsList').innerHTML = `
                         <div class="text-center py-12">
                             <div class="w-16 h-16 mx-auto rounded-full bg-gray-800 flex items-center justify-center mb-4">
                                 <i class="fas fa-box-open text-gray-400 text-2xl"></i>
@@ -2866,24 +2525,20 @@
                 
             } catch (error) {
                 console.error('Error loading items for management:', error);
-                const manageItemsList = document.getElementById('manageItemsList');
-                if (manageItemsList) {
-                    manageItemsList.innerHTML = `
-                        <div class="text-center py-12">
-                            <div class="w-16 h-16 mx-auto rounded-full bg-red-900/30 flex items-center justify-center mb-4">
-                                <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
-                            </div>
-                            <h3 class="text-lg font-bold mb-2">เกิดข้อผิดพลาด</h3>
-                            <p class="text-gray-500">ไม่สามารถโหลดข้อมูลสิ่งของได้</p>
+                document.getElementById('manageItemsList').innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-red-900/30 flex items-center justify-center mb-4">
+                            <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
                         </div>
-                    `;
-                }
+                        <h3 class="text-lg font-bold mb-2">เกิดข้อผิดพลาด</h3>
+                        <p class="text-gray-500">ไม่สามารถโหลดข้อมูลสิ่งของได้</p>
+                    </div>
+                `;
             }
         }
 
         function renderItemsForManagement(items) {
             const container = document.getElementById('manageItemsList');
-            if (!container) return;
             
             container.innerHTML = items.map(item => `
                 <div class="dark-card p-6 mb-4 border border-gray-800">
@@ -2979,17 +2634,13 @@
         // =============================================
         async function loadUsers() {
             try {
-                const usersLoading = document.getElementById('usersLoading');
-                const usersList = document.getElementById('usersList');
-                const noUsers = document.getElementById('noUsers');
-                
-                if (usersLoading) usersLoading.classList.remove('hidden');
-                if (usersList) usersList.innerHTML = '';
-                if (noUsers) noUsers.classList.add('hidden');
+                document.getElementById('usersLoading').classList.remove('hidden');
+                document.getElementById('usersList').innerHTML = '';
+                document.getElementById('noUsers').classList.add('hidden');
                 
                 const data = await callAPI('getUsers');
                 
-                if (usersLoading) usersLoading.classList.add('hidden');
+                document.getElementById('usersLoading').classList.add('hidden');
                 
                 if (data.users && data.users.length > 0) {
                     currentAdminData.users = data.users;
@@ -2997,21 +2648,18 @@
                     renderUsers();
                     updateUserStats(currentAdminData.filteredUsers);
                 } else {
-                    if (noUsers) noUsers.classList.remove('hidden');
+                    document.getElementById('noUsers').classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('Error loading users:', error);
-                const usersLoading = document.getElementById('usersLoading');
-                const noUsers = document.getElementById('noUsers');
-                if (usersLoading) usersLoading.classList.add('hidden');
-                if (noUsers) noUsers.classList.remove('hidden');
+                document.getElementById('usersLoading').classList.add('hidden');
+                document.getElementById('noUsers').classList.remove('hidden');
             }
         }
 
         function renderUsers() {
             const container = document.getElementById('usersList');
-            if (!container) return;
             
             container.innerHTML = currentAdminData.filteredUsers.map(user => `
                 <div class="dark-card p-6 mb-4 border border-gray-800 hover:border-purple-500 transition">
@@ -3069,7 +2717,7 @@
                                     class="btn-primary text-sm">
                                 <i class="fas fa-user-shield mr-2"></i>ตั้งเป็นแอดมิน
                             </button>
-                        ` : user.role === 'admin' && currentUser && currentUser.role === 'superadmin' ? `
+                        ` : user.role === 'admin' && currentUser.role === 'superadmin' ? `
                             <button onclick="demoteToUser('${user.uid}', '${user.displayName}')" 
                                     class="btn-warning text-sm">
                                 <i class="fas fa-user mr-2"></i>ลดเป็นผู้ใช้ทั่วไป
@@ -3096,31 +2744,22 @@
             const adminUsers = users.filter(u => u.role === 'admin').length;
             const superadminUsers = users.filter(u => u.role === 'superadmin').length;
             
-            const totalUsersCount = document.getElementById('totalUsersCount');
-            const regularUsersCount = document.getElementById('regularUsersCount');
-            const adminUsersCount = document.getElementById('adminUsersCount');
-            const superadminUsersCount = document.getElementById('superadminUsersCount');
-            
-            if (totalUsersCount) totalUsersCount.textContent = totalUsers;
-            if (regularUsersCount) regularUsersCount.textContent = regularUsers;
-            if (adminUsersCount) adminUsersCount.textContent = adminUsers;
-            if (superadminUsersCount) superadminUsersCount.textContent = superadminUsers;
+            document.getElementById('totalUsersCount').textContent = totalUsers;
+            document.getElementById('regularUsersCount').textContent = regularUsers;
+            document.getElementById('adminUsersCount').textContent = adminUsers;
+            document.getElementById('superadminUsersCount').textContent = superadminUsers;
         }
 
         async function searchUsersHandler() {
             try {
-                const searchTerm = document.getElementById('userSearch');
-                const roleFilter = document.getElementById('userRoleFilter');
-                const statusFilter = document.getElementById('userStatusFilter');
-                
-                const searchValue = searchTerm ? searchTerm.value : '';
-                const roleValue = roleFilter ? roleFilter.value : 'all';
-                const statusValue = statusFilter ? statusFilter.value : 'all';
+                const searchTerm = document.getElementById('userSearch').value;
+                const roleFilter = document.getElementById('userRoleFilter').value;
+                const statusFilter = document.getElementById('userStatusFilter').value;
                 
                 let filteredUsers = [...currentAdminData.users];
                 
-                if (searchValue) {
-                    const searchLower = searchValue.toLowerCase();
+                if (searchTerm) {
+                    const searchLower = searchTerm.toLowerCase();
                     filteredUsers = filteredUsers.filter(user => 
                         user.displayName.toLowerCase().includes(searchLower) ||
                         user.lineId.toLowerCase().includes(searchLower) ||
@@ -3128,12 +2767,12 @@
                     );
                 }
                 
-                if (roleValue !== 'all') {
-                    filteredUsers = filteredUsers.filter(user => user.role === roleValue);
+                if (roleFilter !== 'all') {
+                    filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
                 }
                 
-                if (statusValue !== 'all') {
-                    filteredUsers = filteredUsers.filter(user => user.status === statusValue);
+                if (statusFilter !== 'all') {
+                    filteredUsers = filteredUsers.filter(user => user.status === statusFilter);
                 }
                 
                 currentAdminData.filteredUsers = filteredUsers;
@@ -3376,111 +3015,107 @@
                 if (result.success && result.user) {
                     const user = result.user;
                     
-                    const userDetailsTitle = document.getElementById('userDetailsTitle');
-                    if (userDetailsTitle) {
-                        userDetailsTitle.textContent = `รายละเอียดผู้ใช้: ${user.displayName}`;
-                    }
+                    document.getElementById('userDetailsTitle').textContent = `รายละเอียดผู้ใช้: ${user.displayName}`;
                     
                     const userDetailsContent = document.getElementById('userDetailsContent');
-                    if (userDetailsContent) {
-                        userDetailsContent.innerHTML = `
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Basic Info -->
-                                <div class="md:col-span-2">
-                                    <div class="flex items-center space-x-4 mb-6">
-                                        <img src="${user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`}" 
-                                             class="w-20 h-20 rounded-full border-2 border-purple-500">
-                                        <div>
-                                            <h4 class="text-xl font-bold">${user.displayName}</h4>
-                                            <p class="text-gray-400">${user.lineId || user.uid}</p>
-                                            <div class="flex items-center space-x-2 mt-2">
-                                                <span class="${getRoleBadgeClass(user.role)}">
-                                                    ${user.role === 'admin' ? 'แอดมิน' : 
-                                                     user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
-                                                </span>
-                                                <span class="status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}">
-                                                    ${user.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
-                                                </span>
-                                            </div>
+                    
+                    userDetailsContent.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Basic Info -->
+                            <div class="md:col-span-2">
+                                <div class="flex items-center space-x-4 mb-6">
+                                    <img src="${user.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff&size=128`}" 
+                                         class="w-20 h-20 rounded-full border-2 border-purple-500">
+                                    <div>
+                                        <h4 class="text-xl font-bold">${user.displayName}</h4>
+                                        <p class="text-gray-400">${user.lineId || user.uid}</p>
+                                        <div class="flex items-center space-x-2 mt-2">
+                                            <span class="${getRoleBadgeClass(user.role)}">
+                                                ${user.role === 'admin' ? 'แอดมิน' : 
+                                                 user.role === 'superadmin' ? 'ซุปเปอร์แอดมิน' : 'ผู้ใช้ทั่วไป'}
+                                            </span>
+                                            <span class="status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}">
+                                                ${user.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <!-- User Stats -->
-                                <div class="dark-card p-4 border border-gray-800">
-                                    <div class="text-center">
-                                        <p class="text-gray-400 text-sm">ยืมทั้งหมด</p>
-                                        <p class="text-3xl font-bold mt-1">${user.statistics ? user.statistics.totalBorrowed || 0 : 0} ครั้ง</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="dark-card p-4 border border-gray-800">
-                                    <div class="text-center">
-                                        <p class="text-gray-400 text-sm">คืนแล้ว</p>
-                                        <p class="text-3xl font-bold mt-1">${user.statistics ? user.statistics.totalReturned || 0 : 0} ครั้ง</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="dark-card p-4 border border-gray-800">
-                                    <div class="text-center">
-                                        <p class="text-gray-400 text-sm">ค้างคืน</p>
-                                        <p class="text-3xl font-bold mt-1">${user.statistics ? user.statistics.totalOverdue || 0 : 0} ครั้ง</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="dark-card p-4 border border-gray-800">
-                                    <div class="text-center">
-                                        <p class="text-gray-400 text-sm">ค้างชำระ</p>
-                                        <p class="text-3xl font-bold mt-1">${user.statistics ? user.statistics.totalRejected || 0 : 0} ครั้ง</p>
-                                    </div>
-                                </div>
-                                
-                                <!-- User Information -->
-                                <div class="md:col-span-2">
-                                    <h5 class="font-bold mb-3">ข้อมูลผู้ใช้</h5>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <p class="text-gray-400 text-sm">วันที่สมัคร</p>
-                                            <p class="font-medium">${formatDate(user.createdAt)}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400 text-sm">อีเมล</p>
-                                            <p class="font-medium">${user.email || 'ไม่มีอีเมล'}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400 text-sm">อัปเดตล่าสุด</p>
-                                            <p class="font-medium">${formatDate(user.createdAt)}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-400 text-sm">LINE ID</p>
-                                            <p class="font-medium">${user.lineId || user.uid}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Recent Borrowings -->
-                                <div class="md:col-span-2">
-                                    <h5 class="font-bold mb-3">ประวัติการยืมล่าสุด</h5>
-                                    ${user.recentBorrowings && user.recentBorrowings.length > 0 ? 
-                                        user.recentBorrowings.map(borrow => `
-                                            <div class="dark-card p-4 mb-3 border border-gray-800">
-                                                <div class="flex justify-between items-center">
-                                                    <div>
-                                                        <p class="font-medium">${borrow.itemName}</p>
-                                                        <p class="text-sm text-gray-400">${formatDate(borrow.borrowDate)} - ${formatDate(borrow.dueDate)}</p>
-                                                    </div>
-                                                    <span class="${getBorrowingStatusClass(borrow.status)}">
-                                                        ${getBorrowingStatusText(borrow.status)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        `).join('') :
-                                        '<p class="text-gray-400 text-center py-4">ไม่มีประวัติการยืมล่าสุด</p>'
-                                    }
                                 </div>
                             </div>
-                        `;
-                    }
+                            
+                            <!-- User Stats -->
+                            <div class="dark-card p-4 border border-gray-800">
+                                <div class="text-center">
+                                    <p class="text-gray-400 text-sm">ยืมทั้งหมด</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalBorrowed || 0} ครั้ง</p>
+                                </div>
+                            </div>
+                            
+                            <div class="dark-card p-4 border border-gray-800">
+                                <div class="text-center">
+                                    <p class="text-gray-400 text-sm">คืนแล้ว</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalReturned || 0} ครั้ง</p>
+                                </div>
+                            </div>
+                            
+                            <div class="dark-card p-4 border border-gray-800">
+                                <div class="text-center">
+                                    <p class="text-gray-400 text-sm">ค้างคืน</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalOverdue || 0} ครั้ง</p>
+                                </div>
+                            </div>
+                            
+                            <div class="dark-card p-4 border border-gray-800">
+                                <div class="text-center">
+                                    <p class="text-gray-400 text-sm">ค้างชำระ</p>
+                                    <p class="text-3xl font-bold mt-1">${user.statistics.totalRejected || 0} ครั้ง</p>
+                                </div>
+                            </div>
+                            
+                            <!-- User Information -->
+                            <div class="md:col-span-2">
+                                <h5 class="font-bold mb-3">ข้อมูลผู้ใช้</h5>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-gray-400 text-sm">วันที่สมัคร</p>
+                                        <p class="font-medium">${formatDate(user.createdAt)}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">อีเมล</p>
+                                        <p class="font-medium">${user.email || 'ไม่มีอีเมล'}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">อัปเดตล่าสุด</p>
+                                        <p class="font-medium">${formatDate(user.createdAt)}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">LINE ID</p>
+                                        <p class="font-medium">${user.lineId || user.uid}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Borrowings -->
+                            <div class="md:col-span-2">
+                                <h5 class="font-bold mb-3">ประวัติการยืมล่าสุด</h5>
+                                ${user.recentBorrowings && user.recentBorrowings.length > 0 ? 
+                                    user.recentBorrowings.map(borrow => `
+                                        <div class="dark-card p-4 mb-3 border border-gray-800">
+                                            <div class="flex justify-between items-center">
+                                                <div>
+                                                    <p class="font-medium">${borrow.itemName}</p>
+                                                    <p class="text-sm text-gray-400">${formatDate(borrow.borrowDate)} - ${formatDate(borrow.dueDate)}</p>
+                                                </div>
+                                                <span class="${getBorrowingStatusClass(borrow.status)}">
+                                                    ${getBorrowingStatusText(borrow.status)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    `).join('') :
+                                    '<p class="text-gray-400 text-center py-4">ไม่มีประวัติการยืมล่าสุด</p>'
+                                }
+                            </div>
+                        </div>
+                    `;
                     
                     document.getElementById('userDetailsModal').classList.remove('hidden');
                 }
@@ -3526,19 +3161,12 @@
                 if (data.settings) {
                     settings = data.settings;
                     
-                    const systemName = document.getElementById('systemName');
-                    const maxBorrowDays = document.getElementById('maxBorrowDays');
-                    const maxItemsPerUser = document.getElementById('maxItemsPerUser');
-                    const overdueFine = document.getElementById('overdueFine');
-                    const contactEmail = document.getElementById('contactEmail');
-                    const contactPhone = document.getElementById('contactPhone');
-                    
-                    if (systemName) systemName.value = settings.system_name || 'ระบบยืมคืนออนไลน์';
-                    if (maxBorrowDays) maxBorrowDays.value = settings.max_borrow_days || 7;
-                    if (maxItemsPerUser) maxItemsPerUser.value = settings.max_items_per_user || 3;
-                    if (overdueFine) overdueFine.value = settings.overdue_fine || 20;
-                    if (contactEmail) contactEmail.value = settings.contact_email || '';
-                    if (contactPhone) contactPhone.value = settings.contact_phone || '';
+                    document.getElementById('systemName').value = settings.system_name || 'ระบบยืมคืนออนไลน์';
+                    document.getElementById('maxBorrowDays').value = settings.max_borrow_days || 7;
+                    document.getElementById('maxItemsPerUser').value = settings.max_items_per_user || 3;
+                    document.getElementById('overdueFine').value = settings.overdue_fine || 20;
+                    document.getElementById('contactEmail').value = settings.contact_email || '';
+                    document.getElementById('contactPhone').value = settings.contact_phone || '';
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -3549,12 +3177,12 @@
             try {
                 showLoading();
                 const updatedSettings = {
-                    system_name: document.getElementById('systemName') ? document.getElementById('systemName').value : '',
-                    max_borrow_days: document.getElementById('maxBorrowDays') ? document.getElementById('maxBorrowDays').value : 7,
-                    max_items_per_user: document.getElementById('maxItemsPerUser') ? document.getElementById('maxItemsPerUser').value : 3,
-                    overdue_fine: document.getElementById('overdueFine') ? document.getElementById('overdueFine').value : 20,
-                    contact_email: document.getElementById('contactEmail') ? document.getElementById('contactEmail').value : '',
-                    contact_phone: document.getElementById('contactPhone') ? document.getElementById('contactPhone').value : ''
+                    system_name: document.getElementById('systemName').value,
+                    max_borrow_days: document.getElementById('maxBorrowDays').value,
+                    max_items_per_user: document.getElementById('maxItemsPerUser').value,
+                    overdue_fine: document.getElementById('overdueFine').value,
+                    contact_email: document.getElementById('contactEmail').value,
+                    contact_phone: document.getElementById('contactPhone').value
                 };
                 
                 const result = await callAPI('updateSettings', {
@@ -3614,16 +3242,17 @@
                     const channelSecret = document.getElementById('channelSecret');
                     const botNameInput = document.getElementById('botNameInput');
                     const botPictureUrl = document.getElementById('botPictureUrl');
-                    const adminNotifyGroup = document.getElementById('adminNotifyGroup');
                     
                     const tokenValue = data.settings.channel_access_token?.value || '';
                     const secretValue = data.settings.channel_secret?.value || '';
                     
-                    if (channelAccessToken) channelAccessToken.value = tokenValue;
-                    if (channelSecret) channelSecret.value = secretValue;
-                    if (botNameInput) botNameInput.value = data.settings.bot_name?.value || '';
-                    if (botPictureUrl) botPictureUrl.value = data.settings.bot_picture_url?.value || '';
-                    if (adminNotifyGroup) adminNotifyGroup.value = data.settings.admin_notify_group?.value || '';
+                    channelAccessToken.value = tokenValue;
+                    channelSecret.value = secretValue;
+                    
+                    botNameInput.value = data.settings.bot_name?.value || '';
+                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
+                    
+                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
                     
                     const notificationEnabled = document.getElementById('notificationEnabled');
                     const notifyOnRequest = document.getElementById('notifyOnRequest');
@@ -3633,13 +3262,13 @@
                     const notifyDueReminder = document.getElementById('notifyDueReminder');
                     const notifyOverdue = document.getElementById('notifyOverdue');
                     
-                    if (notificationEnabled) notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
-                    if (notifyOnRequest) notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
-                    if (notifyOnApprove) notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
-                    if (notifyOnReject) notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
-                    if (notifyOnReturn) notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
-                    if (notifyDueReminder) notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
-                    if (notifyOverdue) notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
+                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
+                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
+                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
+                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
+                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
+                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
+                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
                     
                     showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
                 } else {
@@ -3655,21 +3284,9 @@
 
         async function saveBotSettings() {
             try {
-                const channelAccessToken = document.getElementById('channelAccessToken');
-                if (!channelAccessToken) {
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'ไม่พบช่องกรอก Token',
-                        text: 'กรุณาตรวจสอบหน้าเว็บ',
-                        confirmButtonText: 'ตกลง',
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    return;
-                }
+                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
                 
-                const tokenValue = channelAccessToken.value.trim();
-                if (!tokenValue) {
+                if (!channelAccessToken) {
                     await Swal.fire({
                         icon: 'warning',
                         title: 'กรุณากรอก Channel Access Token',
@@ -3685,62 +3302,62 @@
                 
                 const botSettings = {
                     channel_access_token: {
-                        value: tokenValue,
+                        value: channelAccessToken,
                         description: 'Channel Access Token สำหรับ LINE Messaging API',
                         isActive: true
                     },
                     channel_secret: {
-                        value: document.getElementById('channelSecret') ? document.getElementById('channelSecret').value.trim() : '',
+                        value: document.getElementById('channelSecret').value.trim(),
                         description: 'Channel Secret สำหรับ LINE Messaging API',
                         isActive: true
                     },
                     bot_name: {
-                        value: document.getElementById('botNameInput') ? document.getElementById('botNameInput').value.trim() : '',
+                        value: document.getElementById('botNameInput').value.trim(),
                         description: 'ชื่อของบอทที่แสดงใน LINE',
                         isActive: true
                     },
                     bot_picture_url: {
-                        value: document.getElementById('botPictureUrl') ? document.getElementById('botPictureUrl').value.trim() : '',
+                        value: document.getElementById('botPictureUrl').value.trim(),
                         description: 'URL รูปภาพโปรไฟล์บอท',
                         isActive: true
                     },
                     admin_notify_group: {
-                        value: document.getElementById('adminNotifyGroup') ? document.getElementById('adminNotifyGroup').value.trim() : '',
+                        value: document.getElementById('adminNotifyGroup').value.trim(),
                         description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
                         isActive: true
                     },
                     notification_enabled: {
-                        value: document.getElementById('notificationEnabled') && document.getElementById('notificationEnabled').checked ? 'true' : 'false',
+                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
                         description: 'เปิดใช้งานการแจ้งเตือน',
                         isActive: true
                     },
                     notify_on_request: {
-                        value: document.getElementById('notifyOnRequest') && document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
+                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
                         isActive: true
                     },
                     notify_on_approve: {
-                        value: document.getElementById('notifyOnApprove') && document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
+                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
                         isActive: true
                     },
                     notify_on_reject: {
-                        value: document.getElementById('notifyOnReject') && document.getElementById('notifyOnReject').checked ? 'true' : 'false',
+                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
                         isActive: true
                     },
                     notify_on_return: {
-                        value: document.getElementById('notifyOnReturn') && document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
+                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อมีการคืนของ',
                         isActive: true
                     },
                     notify_due_reminder: {
-                        value: document.getElementById('notifyDueReminder') && document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
+                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
                         isActive: true
                     },
                     notify_overdue: {
-                        value: document.getElementById('notifyOverdue') && document.getElementById('notifyOverdue').checked ? 'true' : 'false',
+                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
                         description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
                         isActive: true
                     }
@@ -3847,38 +3464,10 @@
             const notificationContainer = document.getElementById('notificationContainer');
             const notificationDropdown = document.getElementById('notificationDropdown');
             
-            if (notificationContainer && notificationDropdown && 
-                !notificationContainer.contains(event.target) && !notificationDropdown.classList.contains('hidden')) {
+            if (!notificationContainer.contains(event.target) && !notificationDropdown.classList.contains('hidden')) {
                 notificationDropdown.classList.add('hidden');
             }
         });
-
-        // Drag and drop for image upload
-        const uploadArea = document.getElementById('imageUploadArea');
-        if (uploadArea) {
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                
-                if (e.dataTransfer.files.length) {
-                    const fileInput = document.getElementById('itemImageFile');
-                    if (fileInput) {
-                        fileInput.files = e.dataTransfer.files;
-                        handleImageUpload({ target: { files: e.dataTransfer.files } });
-                    }
-                }
-            });
-        }
 
         // Start the app when page loads
         document.addEventListener('DOMContentLoaded', initializeApp);
