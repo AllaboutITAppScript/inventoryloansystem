@@ -2019,22 +2019,24 @@
         }
 
         // =============================================
-        // Image Upload Functions (แก้ไขใหม่)
+        // Image Upload Functions - FIXED VERSION
         // =============================================
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             
             // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
-                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF)');
+                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF, WEBP)');
+                document.getElementById('itemImageFile').value = '';
                 return;
             }
             
             // Validate file size (5MB)
             if (file.size > 5 * 1024 * 1024) {
                 showMessage('error', 'ไฟล์มีขนาดใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 5MB');
+                document.getElementById('itemImageFile').value = '';
                 return;
             }
             
@@ -2054,6 +2056,17 @@
             reader.readAsDataURL(file);
         }
 
+        // Utility Function: Convert Image to Base64
+        function getBase64Image(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Fixed Image Upload Function using base64
         async function uploadImageToDrive() {
             if (!selectedImageFile) {
                 return { 
@@ -2065,90 +2078,112 @@
             try {
                 showLoading();
                 
-                // สร้าง FormData สำหรับการอัพโหลด
-                const formData = new FormData();
-                formData.append('action', 'uploadImage');
-                formData.append('uid', currentUser.uid);
-                formData.append('image', selectedImageFile);
+                // Convert image to base64
+                const base64Image = await getBase64Image(selectedImageFile);
                 
-                // ใช้ fetch API แทนการส่งผ่าน iframe
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    body: formData
+                // Send to Google Apps Script
+                const result = await callAPI('uploadImage', {
+                    imageData: base64Image,
+                    fileName: selectedImageFile.name,
+                    fileType: selectedImageFile.type
                 });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const result = await response.json();
                 
                 hideLoading();
                 
-                if (result.success) {
-                    return { success: true, url: result.imageUrl };
-                } else {
-                    showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', result.error || 'ไม่สามารถอัพโหลดได้');
+                if (result.success && result.imageUrl) {
                     return { 
-                        success: false, 
-                        error: result.error,
-                        url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
+                        success: true, 
+                        url: result.imageUrl 
                     };
+                } else {
+                    throw new Error(result.error || result.message || 'อัพโหลดรูปภาพล้มเหลว');
                 }
                 
             } catch (error) {
                 hideLoading();
                 console.error('Upload Image Error:', error);
                 
-                // ถ้าอัพโหลดล้มเหลว ให้ใช้รูปภาพเดิมหรือรูปภาพเริ่มต้น
-                const fallbackUrl = document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE;
-                
-                // แจ้งเตือนผู้ใช้แต่ยังให้ดำเนินการต่อได้
-                showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเดิมแทน');
-                
+                // If upload fails, use default image
                 return { 
-                    success: true, // ยังถือว่าสำเร็จเพื่อให้สามารถดำเนินการต่อได้
-                    url: fallbackUrl
+                    success: false, 
+                    error: error.message,
+                    url: CONFIG.DEFAULT_IMAGE
                 };
             }
         }
 
         // =============================================
-        // API Functions
+        // API Functions - UPDATED VERSION
         // =============================================
         async function callAPI(action, data = {}) {
             try {
                 showLoading();
                 
-                const params = new URLSearchParams({
-                    action: action,
-                    uid: currentUser?.uid || '',
-                    ...data
-                });
-                
-                console.log('Calling API:', action, data);
-                
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: params
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // Handle file upload separately
+                if (action === 'uploadImage' || data.imageData) {
+                    const params = new URLSearchParams({
+                        action: 'uploadImage',
+                        uid: currentUser?.uid || '',
+                        imageData: data.imageData || '',
+                        fileName: data.fileName || 'image.jpg',
+                        fileType: data.fileType || 'image/jpeg'
+                    });
+                    
+                    console.log('Calling uploadImage API');
+                    
+                    const response = await fetch(CONFIG.API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: params
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    hideLoading();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || result.message || 'API Error');
+                    }
+                    
+                    return result;
+                } else {
+                    // For regular requests
+                    const params = new URLSearchParams({
+                        action: action,
+                        uid: currentUser?.uid || '',
+                        ...data
+                    });
+                    
+                    console.log('Calling API:', action, data);
+                    
+                    const response = await fetch(CONFIG.API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: params
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    hideLoading();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || result.message || 'API Error');
+                    }
+                    
+                    return result;
                 }
-                
-                const result = await response.json();
-                
-                hideLoading();
-                
-                if (!result.success) {
-                    throw new Error(result.error || result.message || 'API Error');
-                }
-                
-                return result;
                 
             } catch (error) {
                 hideLoading();
@@ -3178,6 +3213,9 @@
             }
         }
 
+        // =============================================
+        // Item Management Functions
+        // =============================================
         async function loadItemsForManagement() {
             try {
                 const data = await callAPI('getItemsForManagement');
@@ -3301,18 +3339,7 @@
                 const itemId = document.getElementById('itemIdInput').value;
                 const isEdit = !!itemId;
                 
-                // Upload image first if selected
-                let imageUrl = document.getElementById('itemImageInput').value;
-                if (selectedImageFile) {
-                    const uploadResult = await uploadImageToDrive();
-                    if (uploadResult.success && uploadResult.url) {
-                        imageUrl = uploadResult.url;
-                    } else if (uploadResult.error) {
-                        showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', uploadResult.error);
-                        return;
-                    }
-                }
-                
+                // ตรวจสอบข้อมูลที่จำเป็น
                 const itemData = {
                     itemId: itemId,
                     itemName: document.getElementById('itemNameInput').value.trim(),
@@ -3320,7 +3347,7 @@
                     category: document.getElementById('itemCategoryInput').value,
                     quantity: parseInt(document.getElementById('itemQuantityInput').value),
                     location: document.getElementById('itemLocationInput').value.trim(),
-                    imageUrl: imageUrl || CONFIG.DEFAULT_IMAGE
+                    imageUrl: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
                 };
                 
                 if (!itemData.itemName) {
@@ -3331,6 +3358,30 @@
                 if (itemData.quantity < 1) {
                     showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
                     return;
+                }
+                
+                // ถ้ามีไฟล์รูปภาพใหม่ ให้อัพโหลด
+                if (selectedImageFile) {
+                    try {
+                        showLoading();
+                        
+                        const uploadResult = await uploadImageToDrive();
+                        
+                        if (uploadResult.success) {
+                            itemData.imageUrl = uploadResult.url;
+                            showMessage('success', 'อัพโหลดรูปภาพสำเร็จ');
+                        } else {
+                            showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเริ่มต้นแทน');
+                            itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
+                        }
+                        
+                    } catch (uploadError) {
+                        console.error('Image upload error:', uploadError);
+                        showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเริ่มต้นแทน');
+                        itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
+                    } finally {
+                        hideLoading();
+                    }
                 }
                 
                 const action = isEdit ? 'updateItem' : 'addItem';
