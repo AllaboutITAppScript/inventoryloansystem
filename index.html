@@ -336,6 +336,10 @@
             border-color: #10b981;
             background: rgba(16, 185, 129, 0.1);
         }
+        .upload-area.uploading {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
         .uploading-spinner {
             border: 3px solid rgba(255, 255, 255, 0.1);
             border-top: 3px solid #3b82f6;
@@ -360,6 +364,20 @@
             font-size: 0.75rem;
             color: #94a3b8;
             margin-top: 4px;
+        }
+        .upload-status {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .upload-status.success {
+            color: #10b981;
+        }
+        .upload-status.error {
+            color: #ef4444;
+        }
+        .upload-status.info {
+            color: #3b82f6;
         }
     </style>
 </head>
