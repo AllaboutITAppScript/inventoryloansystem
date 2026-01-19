@@ -353,6 +353,14 @@
         .uploading #imagePreview {
             opacity: 0.5;
         }
+        .image-url-input {
+            margin-top: 10px;
+        }
+        .image-url-note {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -1273,20 +1281,61 @@
                 <!-- Image Upload Section -->
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">รูปภาพสิ่งของ</label>
-                    <div id="imageUploadArea" class="upload-area" onclick="document.getElementById('itemImageFile').click()">
-                        <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
-                        <div id="uploadPlaceholder">
-                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                            <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ</p>
-                            <p class="text-gray-400 text-sm mt-1">รองรับไฟล์ PNG, JPG, GIF ขนาดไม่เกิน 5MB</p>
+                    
+                    <!-- วิธีที่ 1: อัพโหลดไฟล์ -->
+                    <div class="mb-4">
+                        <div id="imageUploadArea" class="upload-area mb-2" onclick="document.getElementById('itemImageFile').click()">
+                            <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
+                            <div id="uploadPlaceholder">
+                                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ (ไม่เกิน 5MB)</p>
+                                <p class="text-gray-400 text-sm mt-1">หรือใช้ URL ด้านล่าง</p>
+                            </div>
+                            <div id="imagePreview" class="hidden">
+                                <img id="previewImage" class="image-preview mx-auto mb-2">
+                                <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
+                            </div>
+                            <div class="uploading-spinner"></div>
                         </div>
-                        <div id="imagePreview" class="hidden">
-                            <img id="previewImage" class="image-preview mx-auto mb-2">
-                            <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
-                        </div>
-                        <div class="uploading-spinner"></div>
+                        <p class="text-gray-400 text-xs text-center mb-2">
+                            หมายเหตุ: การอัพโหลดไฟล์จะแสดงเฉพาะในเบราว์เซอร์นี้ <br>
+                            ถ้าต้องการเก็บรูปภาพถาวร ให้ใช้ URL ภาพจากภายนอก
+                        </p>
                     </div>
-                    <input type="hidden" id="itemImageInput" value="">
+                    
+                    <!-- วิธีที่ 2: ใส่ URL ภาพ -->
+                    <div class="image-url-input">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">หรือใส่ URL รูปภาพ</label>
+                        <input type="url" id="itemImageUrl" 
+                               class="input-dark w-full" 
+                               placeholder="https://example.com/image.jpg"
+                               oninput="updateImagePreviewFromUrl()">
+                        <p class="image-url-note">
+                            ตัวอย่าง: https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400
+                        </p>
+                    </div>
+                    
+                    <!-- วิธีที่ 3: ใช้รูปภาพสำเร็จรูป -->
+                    <div class="mt-4">
+                        <p class="text-sm font-medium text-gray-300 mb-2">เลือกรูปภาพสำเร็จรูป:</p>
+                        <div class="grid grid-cols-4 gap-2 mb-2">
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100&fit=crop&crop=faces" class="w-full h-20 object-cover rounded">
+                            </button>
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&fit=crop')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=100&fit=crop" class="w-full h-20 object-cover rounded">
+                            </button>
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&fit=crop')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=100&fit=crop" class="w-full h-20 object-cover rounded">
+                            </button>
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400&fit=crop')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=100&fit=crop" class="w-full h-20 object-cover rounded">
+                            </button>
+                        </div>
+                        <p class="image-url-note">
+                            รูปภาพจาก Unsplash (ใช้งานฟรี)
+                        </p>
+                    </div>
                 </div>
             </div>
             
@@ -1320,9 +1369,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            UPLOAD_API_URL: 'https://api.imgbb.com/1/upload',
-            UPLOAD_API_KEY: 'b368f9d9897241e2e04a3a93f1c5e7c5' // ImgBB API Key สำหรับอัพโหลดรูปภาพ
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1544,7 +1591,7 @@
         }
 
         // =============================================
-        // Image Upload Functions
+        // Image Upload Functions (แบบใหม่ - ใช้ URL ภาพโดยตรง)
         // =============================================
         function handleImageUpload(event) {
             const file = event.target.files[0];
@@ -1569,7 +1616,7 @@
             
             selectedImageFile = file;
             
-            // Show preview
+            // Show preview (เฉพาะในเบราว์เซอร์)
             const reader = new FileReader();
             reader.onload = function(e) {
                 const previewImage = document.getElementById('previewImage');
@@ -1579,6 +1626,9 @@
                 previewImage.src = e.target.result;
                 uploadPlaceholder.classList.add('hidden');
                 imagePreview.classList.remove('hidden');
+                
+                // แจ้งเตือนให้ผู้ใช้ทราบ
+                showMessage('info', 'รูปภาพแสดงตัวอย่าง', 'รูปภาพนี้แสดงเฉพาะในเบราว์เซอร์นี้เท่านั้น');
             };
             reader.onerror = function(error) {
                 console.error('Error reading file:', error);
@@ -1589,120 +1639,44 @@
             reader.readAsDataURL(file);
         }
 
-        function getBase64Image(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
+        function updateImagePreviewFromUrl() {
+            const url = document.getElementById('itemImageUrl').value;
+            if (url && url.startsWith('http')) {
+                const previewImage = document.getElementById('previewImage');
+                const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+                const imagePreview = document.getElementById('imagePreview');
+                
+                previewImage.src = url;
+                uploadPlaceholder.classList.add('hidden');
+                imagePreview.classList.remove('hidden');
+            }
         }
 
-        async function uploadImageToImgBB() {
-            try {
-                if (!selectedImageFile) {
-                    // ถ้าไม่มีไฟล์ใหม่ แต่มี URL เดิม ให้ใช้ URL เดิม
-                    const existingImageUrl = document.getElementById('itemImageInput').value;
-                    return { 
-                        success: true, 
-                        url: existingImageUrl || CONFIG.DEFAULT_IMAGE 
+        function selectPresetImage(url) {
+            document.getElementById('itemImageUrl').value = url;
+            updateImagePreviewFromUrl();
+        }
+
+        function getImageUrlFromInputs() {
+            // ตรวจสอบ URL ก่อน
+            const urlInput = document.getElementById('itemImageUrl').value;
+            if (urlInput && urlInput.startsWith('http')) {
+                return urlInput;
+            }
+            
+            // ถ้าไม่มี URL แต่มีไฟล์ ให้แปลงเป็น Data URL (เฉพาะในเบราว์เซอร์)
+            if (selectedImageFile) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        resolve(e.target.result);
                     };
-                }
-                
-                showLoading();
-                
-                // Convert image to base64
-                const base64Image = await getBase64Image(selectedImageFile);
-                
-                // ส่งไปยัง ImgBB API
-                const formData = new FormData();
-                formData.append('key', CONFIG.UPLOAD_API_KEY);
-                formData.append('image', base64Image);
-                formData.append('name', `item_image_${Date.now()}`);
-                
-                const response = await fetch(CONFIG.UPLOAD_API_URL, {
-                    method: 'POST',
-                    body: formData
+                    reader.readAsDataURL(selectedImageFile);
                 });
-                
-                const result = await response.json();
-                
-                hideLoading();
-                
-                if (result.success) {
-                    return { 
-                        success: true, 
-                        url: result.data.url || result.data.display_url 
-                    };
-                } else {
-                    throw new Error(result.error?.message || 'อัพโหลดรูปภาพล้มเหลว');
-                }
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Upload Image Error:', error);
-                
-                // ถ้า upload ล้มเหลว ให้ใช้ default image
-                return { 
-                    success: false, 
-                    error: error.message,
-                    url: CONFIG.DEFAULT_IMAGE
-                };
             }
-        }
-
-        async function uploadImageToGoogleAppsScript() {
-            try {
-                if (!selectedImageFile) {
-                    const existingImageUrl = document.getElementById('itemImageInput').value;
-                    return { 
-                        success: true, 
-                        url: existingImageUrl || CONFIG.DEFAULT_IMAGE 
-                    };
-                }
-                
-                showLoading();
-                
-                // Convert image to base64
-                const base64Image = await getBase64Image(selectedImageFile);
-                
-                // ส่งไปยัง Google Apps Script API
-                const result = await callAPI('uploadImage', {
-                    imageData: base64Image,
-                    fileName: selectedImageFile.name,
-                    fileType: selectedImageFile.type
-                });
-                
-                hideLoading();
-                
-                if (result.success && result.imageUrl) {
-                    return { 
-                        success: true, 
-                        url: result.imageUrl 
-                    };
-                } else {
-                    throw new Error(result.error || result.message || 'อัพโหลดรูปภาพล้มเหลว');
-                }
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Upload Image Error:', error);
-                
-                // ลองใช้ ImgBB ถ้า Google Apps Script ล้มเหลว
-                console.log('Trying ImgBB as fallback...');
-                const imgbbResult = await uploadImageToImgBB();
-                return imgbbResult;
-            }
-        }
-
-        async function uploadImage() {
-            // ลองใช้ Google Apps Script ก่อน ถ้าล้มเหลวใช้ ImgBB
-            try {
-                return await uploadImageToGoogleAppsScript();
-            } catch (error) {
-                console.log('Google Apps Script upload failed, trying ImgBB...');
-                return await uploadImageToImgBB();
-            }
+            
+            // ถ้าไม่มีอะไรเลย ใช้รูปภาพเริ่มต้น
+            return CONFIG.DEFAULT_IMAGE;
         }
 
         // =============================================
@@ -1710,67 +1684,32 @@
         // =============================================
         async function callAPI(action, data = {}) {
             try {
-                // For image upload, handle specially
-                if (action === 'uploadImage' || data.imageData) {
-                    if (!data.imageData) {
-                        throw new Error('No image data provided');
-                    }
-                    
-                    const params = new URLSearchParams({
-                        action: 'uploadImage',
-                        uid: currentUser?.uid || '',
-                        imageData: data.imageData,
-                        fileName: data.fileName || 'image.jpg',
-                        fileType: data.fileType || 'image/jpeg'
-                    });
-                    
-                    const response = await fetch(CONFIG.API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: params
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const result = await response.json();
-                    
-                    if (!result.success) {
-                        throw new Error(result.error || result.message || 'API Error');
-                    }
-                    
-                    return result;
-                } else {
-                    // For regular requests
-                    const params = new URLSearchParams({
-                        action: action,
-                        uid: currentUser?.uid || '',
-                        ...data
-                    });
-                    
-                    const response = await fetch(CONFIG.API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: params
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const result = await response.json();
-                    
-                    if (!result.success) {
-                        throw new Error(result.error || result.message || 'API Error');
-                    }
-                    
-                    return result;
+                // Remove image upload handling since we're not uploading to Google Drive anymore
+                const params = new URLSearchParams({
+                    action: action,
+                    uid: currentUser?.uid || '',
+                    ...data
+                });
+                
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || result.message || 'API Error');
+                }
+                
+                return result;
                 
             } catch (error) {
                 console.error('API Call Error:', error);
@@ -2896,13 +2835,18 @@
                     document.getElementById('itemCategoryInput').value = item.category || 'book';
                     document.getElementById('itemQuantityInput').value = item.quantity || 1;
                     document.getElementById('itemLocationInput').value = item.location || '';
-                    document.getElementById('itemImageInput').value = item.imageUrl || '';
+                    document.getElementById('itemImageUrl').value = item.imageUrl || '';
                     
                     const uploadPlaceholder = document.getElementById('uploadPlaceholder');
                     const imagePreview = document.getElementById('imagePreview');
                     const previewImage = document.getElementById('previewImage');
                     
-                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE) {
+                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE && item.imageUrl.startsWith('http')) {
+                        previewImage.src = item.imageUrl;
+                        uploadPlaceholder.classList.add('hidden');
+                        imagePreview.classList.remove('hidden');
+                    } else if (item.imageUrl && item.imageUrl.startsWith('data:')) {
+                        // ถ้าเป็น data URL จากไฟล์ที่อัพโหลด
                         previewImage.src = item.imageUrl;
                         uploadPlaceholder.classList.add('hidden');
                         imagePreview.classList.remove('hidden');
@@ -2932,8 +2876,7 @@
                     description: document.getElementById('itemDescInput').value.trim(),
                     category: document.getElementById('itemCategoryInput').value,
                     quantity: parseInt(document.getElementById('itemQuantityInput').value),
-                    location: document.getElementById('itemLocationInput').value.trim(),
-                    imageUrl: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
+                    location: document.getElementById('itemLocationInput').value.trim()
                 };
                 
                 if (!itemData.itemName) {
@@ -2946,29 +2889,22 @@
                     return;
                 }
                 
-                // ถ้ามีไฟล์รูปภาพใหม่ ให้อัพโหลด
-                let uploadResult = null;
-                if (selectedImageFile) {
-                    try {
-                        uploadResult = await uploadImage();
-                        
-                        if (uploadResult.success) {
-                            itemData.imageUrl = uploadResult.url;
-                            showMessage('success', 'อัพโหลดรูปภาพสำเร็จ');
-                        } else {
-                            showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเริ่มต้นแทน');
-                            itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
-                        }
-                        
-                    } catch (uploadError) {
-                        console.error('Image upload error:', uploadError);
-                        showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเริ่มต้นแทน');
-                        itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
-                    }
+                // ตรวจสอบ URL ภาพ
+                const imageUrlInput = document.getElementById('itemImageUrl').value;
+                if (imageUrlInput && imageUrlInput.startsWith('http')) {
+                    itemData.imageUrl = imageUrlInput;
+                } else if (selectedImageFile) {
+                    // แปลงไฟล์เป็น Data URL
+                    const dataUrl = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            resolve(e.target.result);
+                        };
+                        reader.readAsDataURL(selectedImageFile);
+                    });
+                    itemData.imageUrl = dataUrl;
                 } else {
-                    // ถ้าไม่มีไฟล์ใหม่ ให้ใช้รูปภาพเดิม
-                    const existingImageUrl = document.getElementById('itemImageInput').value;
-                    itemData.imageUrl = existingImageUrl || CONFIG.DEFAULT_IMAGE;
+                    itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
                 }
                 
                 const action = isEdit ? 'updateItem' : 'addItem';
@@ -3066,7 +3002,7 @@
             document.getElementById('itemNameInput').value = '';
             document.getElementById('itemDescInput').value = '';
             document.getElementById('itemLocationInput').value = '';
-            document.getElementById('itemImageInput').value = '';
+            document.getElementById('itemImageUrl').value = '';
             document.getElementById('itemQuantityInput').value = '1';
             document.getElementById('itemCategoryInput').value = 'book';
             
