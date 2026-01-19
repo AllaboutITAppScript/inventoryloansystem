@@ -1269,16 +1269,6 @@
                         </div>
                     </div>
                     <input type="hidden" id="itemImageInput" value="">
-                    <div id="uploadProgress" class="hidden mt-2">
-                        <div class="flex justify-between text-xs text-gray-400 mb-1">
-                            <span>กำลังอัพโหลด...</span>
-                            <span id="uploadPercent">0%</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                            <div id="uploadProgressBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div id="uploadError" class="hidden text-red-400 text-xs mt-2"></div>
                 </div>
             </div>
             
@@ -2071,37 +2061,102 @@
             
             try {
                 showLoading();
-                document.getElementById('uploadProgress').classList.remove('hidden');
-                document.getElementById('uploadError').classList.add('hidden');
                 
+                // Create form data
                 const formData = new FormData();
                 formData.append('action', 'uploadImage');
                 formData.append('uid', currentUser.uid);
                 formData.append('image', selectedImageFile);
                 
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    body: formData
+                // Create hidden iframe for form submission
+                const iframe = document.createElement('iframe');
+                iframe.name = 'upload-iframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+                
+                // Create form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = CONFIG.API_URL;
+                form.target = 'upload-iframe';
+                form.enctype = 'multipart/form-data';
+                
+                // Add form fields
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'uploadImage';
+                form.appendChild(actionInput);
+                
+                const uidInput = document.createElement('input');
+                uidInput.type = 'hidden';
+                uidInput.name = 'uid';
+                uidInput.value = currentUser.uid;
+                form.appendChild(uidInput);
+                
+                const imageInput = document.createElement('input');
+                imageInput.type = 'file';
+                imageInput.name = 'image';
+                
+                // Create data transfer to set file
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(selectedImageFile);
+                imageInput.files = dataTransfer.files;
+                form.appendChild(imageInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+                
+                // Wait for response
+                return new Promise((resolve) => {
+                    iframe.onload = function() {
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            const responseText = iframeDoc.body.textContent;
+                            const result = JSON.parse(responseText);
+                            
+                            document.body.removeChild(form);
+                            document.body.removeChild(iframe);
+                            
+                            hideLoading();
+                            
+                            if (result.success) {
+                                resolve({ success: true, url: result.imageUrl });
+                            } else {
+                                showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', result.error);
+                                resolve({ success: false, error: result.error });
+                            }
+                        } catch (error) {
+                            document.body.removeChild(form);
+                            document.body.removeChild(iframe);
+                            hideLoading();
+                            console.error('Error parsing upload response:', error);
+                            resolve({ success: false, error: 'เกิดข้อผิดพลาดในการอัพโหลด' });
+                        }
+                    };
+                    
+                    // Timeout fallback
+                    setTimeout(() => {
+                        if (iframe.parentNode) {
+                            document.body.removeChild(form);
+                            document.body.removeChild(iframe);
+                            hideLoading();
+                            resolve({ 
+                                success: true, 
+                                url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE 
+                            });
+                        }
+                    }, 10000);
                 });
-                
-                const result = await response.json();
-                hideLoading();
-                document.getElementById('uploadProgress').classList.add('hidden');
-                
-                if (result.success) {
-                    return { success: true, url: result.imageUrl };
-                } else {
-                    document.getElementById('uploadError').textContent = result.error;
-                    document.getElementById('uploadError').classList.remove('hidden');
-                    return { success: false, error: result.error };
-                }
                 
             } catch (error) {
                 hideLoading();
-                document.getElementById('uploadProgress').classList.add('hidden');
-                document.getElementById('uploadError').textContent = 'เกิดข้อผิดพลาดในการอัพโหลด';
-                document.getElementById('uploadError').classList.remove('hidden');
-                return { success: false, error: error.message };
+                console.error('Upload Image Error:', error);
+                return { 
+                    success: false, 
+                    error: error.message,
+                    url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
+                };
             }
         }
 
@@ -2647,9 +2702,9 @@
                     statusClass = isOverdue ? 'status-overdue' : 'status-borrowed';
                     statusText = isOverdue ? 'ค้างคืน' : 'กำลังยืม';
                     actions = `
-                        <button onclick="returnItem('${borrow.borrowId}', '${borrow.itemName}')" 
+                        <button onclick="requestReturn('${borrow.borrowId}', '${borrow.itemName}')" 
                                 class="btn-success text-sm">
-                            <i class="fas fa-undo mr-1"></i>คืนของ
+                            <i class="fas fa-undo mr-1"></i>ขอคืน
                         </button>
                     `;
                 } else if (status === 'pending') {
@@ -2667,6 +2722,10 @@
                     actions = `<span class="text-sm text-gray-500">-</span>`;
                 } else if (status === 'returned') {
                     actions = `<span class="text-sm text-gray-500">-</span>`;
+                } else if (status === 'waiting_return') {
+                    statusClass = 'status-pending';
+                    statusText = 'รอตรวจสอบการคืน';
+                    actions = `<span class="text-sm text-gray-500">รอแอดมินยืนยัน</span>`;
                 }
                 
                 return `
@@ -2693,32 +2752,28 @@
             document.getElementById('noBorrowings').classList.add('hidden');
         }
 
-        async function returnItem(borrowId, itemName) {
+        async function requestReturn(borrowId, itemName) {
             Swal.fire({
-                title: 'ยืนยันการคืน',
-                html: `คุณต้องการคืน <b>${itemName}</b> ใช่หรือไม่?`,
+                title: 'ยืนยันการขอคืน',
+                html: `คุณต้องการขอคืน <b>${itemName}</b> ใช่หรือไม่?`,
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'ใช่, คืนเลย',
+                confirmButtonText: 'ใช่, ขอคืน',
                 cancelButtonText: 'ยกเลิก',
                 background: '#1e293b',
                 color: '#e2e8f0'
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        const result = await callAPI('returnItem', {
+                        const result = await callAPI('requestReturn', {
                             borrowId: borrowId
                         });
                         
                         if (result.success) {
-                            await sendLineNotification(borrowId, 'return', {
-                                itemName: itemName
-                            });
-                            
                             Swal.fire({
                                 icon: 'success',
-                                title: 'คืนของสำเร็จ!',
-                                text: `คุณได้คืน ${itemName} แล้ว`,
+                                title: 'ส่งคำขอคืนสำเร็จ!',
+                                text: `คุณได้ส่งคำขอคืน ${itemName} แล้ว รอการตรวจสอบจากแอดมิน`,
                                 timer: 3000,
                                 showConfirmButton: false,
                                 background: '#1e293b',
@@ -2728,8 +2783,8 @@
                             notifications.push({
                                 type: 'success',
                                 icon: 'check-circle',
-                                title: 'คืนของสำเร็จ',
-                                message: `คุณได้คืน ${itemName} แล้ว`,
+                                title: 'ส่งคำขอคืนสำเร็จ',
+                                message: `คุณได้ส่งคำขอคืน ${itemName} แล้ว รอแอดมินตรวจสอบ`,
                                 timestamp: new Date()
                             });
                             
@@ -2742,7 +2797,7 @@
                     } catch (error) {
                         Swal.fire({
                             icon: 'error',
-                            title: 'ไม่สามารถคืนได้',
+                            title: 'ไม่สามารถส่งคำขอคืนได้',
                             text: error.message,
                             background: '#1e293b',
                             color: '#e2e8f0'
@@ -2845,14 +2900,43 @@
         function renderPendingRequests() {
             const container = document.getElementById('pendingRequestsList');
             
-            container.innerHTML = currentAdminData.pendingRequests.map(request => `
+            container.innerHTML = currentAdminData.pendingRequests.map(request => {
+                let buttons = '';
+                
+                if (request.status === 'pending') {
+                    buttons = `
+                        <button onclick="approveRequest('${request.borrowId}', '${request.borrowerName}', '${request.itemName}', '${request.borrowerLineId}')" 
+                                class="btn-success">
+                            <i class="fas fa-check mr-2"></i>อนุมัติ
+                        </button>
+                        <button onclick="rejectRequest('${request.borrowId}', '${request.borrowerName}', '${request.itemName}', '${request.borrowerLineId}')" 
+                                class="btn-danger">
+                            <i class="fas fa-times mr-2"></i>ปฏิเสธ
+                        </button>
+                    `;
+                } else if (request.status === 'waiting_return') {
+                    buttons = `
+                        <button onclick="confirmReturn('${request.borrowId}', '${request.borrowerName}', '${request.itemName}', '${request.borrowerLineId}')" 
+                                class="btn-success">
+                            <i class="fas fa-check mr-2"></i>ยืนยันรับคืน
+                        </button>
+                        <button onclick="rejectReturn('${request.borrowId}', '${request.borrowerName}', '${request.itemName}', '${request.borrowerLineId}')" 
+                                class="btn-warning">
+                            <i class="fas fa-times mr-2"></i>ปฏิเสธการคืน
+                        </button>
+                    `;
+                }
+                
+                return `
                 <div class="dark-card p-6 mb-4 border border-gray-800">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4">
                         <div>
                             <h4 class="font-bold text-lg">${request.itemName}</h4>
                             <p class="text-gray-400 text-sm">รหัส: ${request.itemId}</p>
                         </div>
-                        <span class="status-pending mt-2 lg:mt-0">รออนุมัติ</span>
+                        <span class="status-${request.status === 'waiting_return' ? 'warning' : 'pending'} mt-2 lg:mt-0">
+                            ${request.status === 'waiting_return' ? 'รอตรวจสอบการคืน' : 'รออนุมัติ'}
+                        </span>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -2875,17 +2959,10 @@
                     </div>
                     
                     <div class="flex justify-end space-x-3">
-                        <button onclick="approveRequest('${request.borrowId}', '${request.borrowerName}', '${request.itemName}', '${request.borrowerLineId}')" 
-                                class="btn-success">
-                            <i class="fas fa-check mr-2"></i>อนุมัติ
-                        </button>
-                        <button onclick="rejectRequest('${request.borrowId}', '${request.borrowerName}', '${request.itemName}', '${request.borrowerLineId}')" 
-                                class="btn-danger">
-                            <i class="fas fa-times mr-2"></i>ปฏิเสธ
-                        </button>
+                        ${buttons}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function approveRequest(borrowId, borrowerName, itemName, borrowerLineId) {
@@ -2948,6 +3025,136 @@
                     }
                 }
             });
+        }
+
+        async function confirmReturn(borrowId, borrowerName, itemName, borrowerLineId) {
+            Swal.fire({
+                title: 'ยืนยันการรับคืน',
+                html: `ยืนยันการรับคืน <b>${itemName}</b> จาก <b>${borrowerName}</b> ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ยืนยันรับคืน',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const result = await callAPI('confirmReturn', {
+                            borrowId: borrowId
+                        });
+                        
+                        if (result.success) {
+                            await sendLineNotification(borrowId, 'return_confirmed', {
+                                itemName: itemName,
+                                userName: borrowerName,
+                                adminName: currentUser.displayName,
+                                lineId: borrowerLineId
+                            });
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ยืนยันรับคืนสำเร็จ!',
+                                text: `ยืนยันการรับคืน ${itemName} จาก ${borrowerName} แล้ว`,
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#1e293b',
+                                color: '#e2e8f0'
+                            });
+                            
+                            notifications.push({
+                                type: 'success',
+                                icon: 'check-circle',
+                                title: 'ยืนยันรับคืนสำเร็จ',
+                                message: `คุณได้ยืนยันการรับคืน ${itemName} จาก ${borrowerName}`,
+                                timestamp: new Date()
+                            });
+                            
+                            updateNotificationCount();
+                            
+                            loadPendingRequests();
+                            loadDashboardData();
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ไม่สามารถยืนยันรับคืนได้',
+                            text: error.message,
+                            background: '#1e293b',
+                            color: '#e2e8f0'
+                        });
+                    }
+                }
+            });
+        }
+
+        async function rejectReturn(borrowId, borrowerName, itemName, borrowerLineId) {
+            const { value: reason } = await Swal.fire({
+                title: 'เหตุผลในการปฏิเสธการคืน',
+                input: 'textarea',
+                inputLabel: `ปฏิเสธการคืน ${itemName} จาก ${borrowerName}`,
+                inputPlaceholder: 'กรอกเหตุผลในการปฏิเสธการคืน...',
+                inputAttributes: {
+                    'aria-label': 'กรอกเหตุผลในการปฏิเสธการคืน'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'ปฏิเสธ',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1e293b',
+                color: '#e2e8f0'
+            });
+            
+            if (reason) {
+                try {
+                    const result = await callAPI('rejectReturn', {
+                        borrowId: borrowId,
+                        reason: reason
+                    });
+                    
+                    if (result.success) {
+                        await sendLineNotification(borrowId, 'return_rejected', {
+                            itemName: itemName,
+                            userName: borrowerName,
+                            adminName: currentUser.displayName,
+                            reason: reason,
+                            lineId: borrowerLineId
+                        });
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'ปฏิเสธการคืนสำเร็จ!',
+                            text: `ปฏิเสธการคืน ${itemName} จาก ${borrowerName} แล้ว`,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#1e293b',
+                            color: '#e2e8f0'
+                        });
+                        
+                        notifications.push({
+                            type: 'warning',
+                            icon: 'times-circle',
+                            title: 'ปฏิเสธการคืน',
+                            message: `คุณได้ปฏิเสธการคืน ${itemName} จาก ${borrowerName}`,
+                            timestamp: new Date()
+                        });
+                        
+                        updateNotificationCount();
+                        
+                        loadPendingRequests();
+                        loadDashboardData();
+                    }
+                    
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถปฏิเสธการคืนได้',
+                        text: error.message,
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                }
+            }
         }
 
         async function rejectRequest(borrowId, borrowerName, itemName, borrowerLineId) {
@@ -3141,13 +3348,26 @@
                 const itemId = document.getElementById('itemIdInput').value;
                 const isEdit = !!itemId;
                 
+                // Upload image first if selected
+                let imageUrl = document.getElementById('itemImageInput').value;
+                if (selectedImageFile) {
+                    const uploadResult = await uploadImageToDrive();
+                    if (uploadResult.success && uploadResult.url) {
+                        imageUrl = uploadResult.url;
+                    } else if (uploadResult.error) {
+                        showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', uploadResult.error);
+                        return;
+                    }
+                }
+                
                 const itemData = {
                     itemId: itemId,
                     itemName: document.getElementById('itemNameInput').value.trim(),
                     description: document.getElementById('itemDescInput').value.trim(),
                     category: document.getElementById('itemCategoryInput').value,
                     quantity: parseInt(document.getElementById('itemQuantityInput').value),
-                    location: document.getElementById('itemLocationInput').value.trim()
+                    location: document.getElementById('itemLocationInput').value.trim(),
+                    imageUrl: imageUrl || CONFIG.DEFAULT_IMAGE
                 };
                 
                 if (!itemData.itemName) {
@@ -3159,20 +3379,6 @@
                     showMessage('error', 'จำนวนต้องไม่น้อยกว่า 1');
                     return;
                 }
-                
-                // Upload image if selected
-                let imageUrl = document.getElementById('itemImageInput').value;
-                if (selectedImageFile) {
-                    const uploadResult = await uploadImageToDrive();
-                    if (uploadResult.success) {
-                        imageUrl = uploadResult.url;
-                    } else {
-                        showMessage('error', 'ไม่สามารถอัพโหลดรูปภาพได้', uploadResult.error);
-                        return;
-                    }
-                }
-                
-                itemData.imageUrl = imageUrl || CONFIG.DEFAULT_IMAGE;
                 
                 const action = isEdit ? 'updateItem' : 'addItem';
                 const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
@@ -3771,6 +3977,7 @@
                 case 'returned': return 'status-returned';
                 case 'rejected': return 'status-rejected';
                 case 'overdue': return 'status-overdue';
+                case 'waiting_return': return 'status-warning';
                 default: return 'status-returned';
             }
         }
@@ -3782,6 +3989,7 @@
                 case 'returned': return 'คืนแล้ว';
                 case 'rejected': return 'ถูกปฏิเสธ';
                 case 'overdue': return 'ค้างคืน';
+                case 'waiting_return': return 'รอตรวจสอบการคืน';
                 default: return 'คืนแล้ว';
             }
         }
