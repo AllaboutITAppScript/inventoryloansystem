@@ -1320,8 +1320,8 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
+            GOOGLE_APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1543,7 +1543,7 @@
         }
 
         // =============================================
-        // Image Upload Functions
+        // Image Upload Functions (จากโค้ดตัวอย่าง)
         // =============================================
         function handleImageUpload(event) {
             const file = event.target.files[0];
@@ -1578,12 +1578,19 @@
                 previewImage.src = e.target.result;
                 uploadPlaceholder.classList.add('hidden');
                 imagePreview.classList.remove('hidden');
+                
+                // แสดงสถานะกำลังอัพโหลด
+                const uploadArea = document.getElementById('imageUploadArea');
+                uploadArea.classList.add('uploading');
             };
             reader.onerror = function(error) {
                 console.error('Error reading file:', error);
                 showMessage('error', 'ไม่สามารถอ่านไฟล์ได้', 'กรุณาเลือกไฟล์อื่น');
                 document.getElementById('itemImageFile').value = '';
                 selectedImageFile = null;
+                
+                const uploadArea = document.getElementById('imageUploadArea');
+                uploadArea.classList.remove('uploading');
             };
             reader.readAsDataURL(file);
         }
@@ -1591,7 +1598,12 @@
         function getBase64Image(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onload = () => {
+                    // แยกส่วน base64 ออกจาก data URL
+                    const result = reader.result;
+                    const base64 = result.split(',')[1];
+                    resolve(base64);
+                };
                 reader.onerror = error => reject(error);
                 reader.readAsDataURL(file);
             });
@@ -1613,12 +1625,26 @@
                 // Convert image to base64
                 const base64Image = await getBase64Image(selectedImageFile);
                 
+                // สร้าง FormData สำหรับส่งข้อมูล
+                const formData = new FormData();
+                formData.append('action', 'uploadImage');
+                formData.append('uid', currentUser?.uid || '');
+                formData.append('imageData', base64Image);
+                formData.append('fileName', selectedImageFile.name);
+                formData.append('fileType', selectedImageFile.type);
+                formData.append('timestamp', Date.now().toString());
+                
                 // Send to Google Apps Script
-                const result = await callAPI('uploadImage', {
-                    imageData: base64Image,
-                    fileName: selectedImageFile.name,
-                    fileType: selectedImageFile.type
+                const response = await fetch(CONFIG.GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
                 
                 hideLoading();
                 
@@ -1641,6 +1667,12 @@
                     error: error.message,
                     url: CONFIG.DEFAULT_IMAGE
                 };
+            } finally {
+                // ลบสถานะกำลังอัพโหลด
+                const uploadArea = document.getElementById('imageUploadArea');
+                if (uploadArea) {
+                    uploadArea.classList.remove('uploading');
+                }
             }
         }
 
@@ -1655,20 +1687,17 @@
                         throw new Error('No image data provided');
                     }
                     
-                    const params = new URLSearchParams({
-                        action: 'uploadImage',
-                        uid: currentUser?.uid || '',
-                        imageData: data.imageData,
-                        fileName: data.fileName || 'image.jpg',
-                        fileType: data.fileType || 'image/jpeg'
-                    });
+                    const formData = new FormData();
+                    formData.append('action', 'uploadImage');
+                    formData.append('uid', currentUser?.uid || '');
+                    formData.append('imageData', data.imageData);
+                    formData.append('fileName', data.fileName || 'image.jpg');
+                    formData.append('fileType', data.fileType || 'image/jpeg');
+                    formData.append('timestamp', Date.now().toString());
                     
                     const response = await fetch(CONFIG.API_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: params
+                        body: formData
                     });
                     
                     if (!response.ok) {
@@ -1684,18 +1713,22 @@
                     return result;
                 } else {
                     // For regular requests
-                    const params = new URLSearchParams({
-                        action: action,
-                        uid: currentUser?.uid || '',
-                        ...data
-                    });
+                    const formData = new FormData();
+                    formData.append('action', action);
+                    formData.append('uid', currentUser?.uid || '');
+                    
+                    // Add all data properties to formData
+                    for (const key in data) {
+                        if (typeof data[key] === 'object' && data[key] !== null) {
+                            formData.append(key, JSON.stringify(data[key]));
+                        } else {
+                            formData.append(key, data[key]);
+                        }
+                    }
                     
                     const response = await fetch(CONFIG.API_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: params
+                        body: formData
                     });
                     
                     if (!response.ok) {
@@ -2086,7 +2119,12 @@
         }
 
         function searchItems() {
-            loadItems();
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            debounceTimer = setTimeout(() => {
+                loadItems();
+            }, 500);
         }
 
         function filterItems() {
@@ -2889,10 +2927,12 @@
                 let uploadResult = null;
                 if (selectedImageFile) {
                     try {
+                        showLoading();
                         uploadResult = await uploadImageToDrive();
                         
                         if (uploadResult.success) {
                             itemData.imageUrl = uploadResult.url;
+                            document.getElementById('itemImageInput').value = uploadResult.url;
                             showMessage('success', 'อัพโหลดรูปภาพสำเร็จ');
                         } else {
                             showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเริ่มต้นแทน');
@@ -2903,6 +2943,8 @@
                         console.error('Image upload error:', uploadError);
                         showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเริ่มต้นแทน');
                         itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
+                    } finally {
+                        hideLoading();
                     }
                 } else {
                     // ถ้าไม่มีไฟล์ใหม่ ให้ใช้รูปภาพเดิม
@@ -4208,7 +4250,8 @@
                 
                 if (e.dataTransfer.files.length) {
                     document.getElementById('itemImageFile').files = e.dataTransfer.files;
-                    handleImageUpload({ target: { files: e.dataTransfer.files } });
+                    const event = new Event('change');
+                    document.getElementById('itemImageFile').dispatchEvent(event);
                 }
             });
         }
