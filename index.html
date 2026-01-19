@@ -2019,7 +2019,7 @@
         }
 
         // =============================================
-        // Image Upload Functions
+        // Image Upload Functions (แก้ไขใหม่)
         // =============================================
         function handleImageUpload(event) {
             const file = event.target.files[0];
@@ -2056,106 +2056,59 @@
 
         async function uploadImageToDrive() {
             if (!selectedImageFile) {
-                return { success: true, url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE };
+                return { 
+                    success: true, 
+                    url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE 
+                };
             }
             
             try {
                 showLoading();
                 
-                // Create form data
+                // สร้าง FormData สำหรับการอัพโหลด
                 const formData = new FormData();
                 formData.append('action', 'uploadImage');
                 formData.append('uid', currentUser.uid);
                 formData.append('image', selectedImageFile);
                 
-                // Create hidden iframe for form submission
-                const iframe = document.createElement('iframe');
-                iframe.name = 'upload-iframe';
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-                
-                // Create form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = CONFIG.API_URL;
-                form.target = 'upload-iframe';
-                form.enctype = 'multipart/form-data';
-                
-                // Add form fields
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'action';
-                actionInput.value = 'uploadImage';
-                form.appendChild(actionInput);
-                
-                const uidInput = document.createElement('input');
-                uidInput.type = 'hidden';
-                uidInput.name = 'uid';
-                uidInput.value = currentUser.uid;
-                form.appendChild(uidInput);
-                
-                const imageInput = document.createElement('input');
-                imageInput.type = 'file';
-                imageInput.name = 'image';
-                
-                // Create data transfer to set file
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(selectedImageFile);
-                imageInput.files = dataTransfer.files;
-                form.appendChild(imageInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-                
-                // Wait for response
-                return new Promise((resolve) => {
-                    iframe.onload = function() {
-                        try {
-                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                            const responseText = iframeDoc.body.textContent;
-                            const result = JSON.parse(responseText);
-                            
-                            document.body.removeChild(form);
-                            document.body.removeChild(iframe);
-                            
-                            hideLoading();
-                            
-                            if (result.success) {
-                                resolve({ success: true, url: result.imageUrl });
-                            } else {
-                                showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', result.error);
-                                resolve({ success: false, error: result.error });
-                            }
-                        } catch (error) {
-                            document.body.removeChild(form);
-                            document.body.removeChild(iframe);
-                            hideLoading();
-                            console.error('Error parsing upload response:', error);
-                            resolve({ success: false, error: 'เกิดข้อผิดพลาดในการอัพโหลด' });
-                        }
-                    };
-                    
-                    // Timeout fallback
-                    setTimeout(() => {
-                        if (iframe.parentNode) {
-                            document.body.removeChild(form);
-                            document.body.removeChild(iframe);
-                            hideLoading();
-                            resolve({ 
-                                success: true, 
-                                url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE 
-                            });
-                        }
-                    }, 10000);
+                // ใช้ fetch API แทนการส่งผ่าน iframe
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    body: formData
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                hideLoading();
+                
+                if (result.success) {
+                    return { success: true, url: result.imageUrl };
+                } else {
+                    showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', result.error || 'ไม่สามารถอัพโหลดได้');
+                    return { 
+                        success: false, 
+                        error: result.error,
+                        url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
+                    };
+                }
                 
             } catch (error) {
                 hideLoading();
                 console.error('Upload Image Error:', error);
+                
+                // ถ้าอัพโหลดล้มเหลว ให้ใช้รูปภาพเดิมหรือรูปภาพเริ่มต้น
+                const fallbackUrl = document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE;
+                
+                // แจ้งเตือนผู้ใช้แต่ยังให้ดำเนินการต่อได้
+                showMessage('warning', 'อัพโหลดรูปภาพล้มเหลว', 'ใช้รูปภาพเดิมแทน');
+                
                 return { 
-                    success: false, 
-                    error: error.message,
-                    url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
+                    success: true, // ยังถือว่าสำเร็จเพื่อให้สามารถดำเนินการต่อได้
+                    url: fallbackUrl
                 };
             }
         }
