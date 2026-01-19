@@ -1321,7 +1321,8 @@
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
             DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
+            UPLOAD_API_URL: 'https://api.imgbb.com/1/upload',
+            UPLOAD_API_KEY: 'b368f9d9897241e2e04a3a93f1c5e7c5' // ImgBB API Key สำหรับอัพโหลดรูปภาพ
         };
 
         // =============================================
@@ -1597,7 +1598,7 @@
             });
         }
 
-        async function uploadImageToDrive() {
+        async function uploadImageToImgBB() {
             try {
                 if (!selectedImageFile) {
                     // ถ้าไม่มีไฟล์ใหม่ แต่มี URL เดิม ให้ใช้ URL เดิม
@@ -1613,7 +1614,59 @@
                 // Convert image to base64
                 const base64Image = await getBase64Image(selectedImageFile);
                 
-                // Send to Google Apps Script
+                // ส่งไปยัง ImgBB API
+                const formData = new FormData();
+                formData.append('key', CONFIG.UPLOAD_API_KEY);
+                formData.append('image', base64Image);
+                formData.append('name', `item_image_${Date.now()}`);
+                
+                const response = await fetch(CONFIG.UPLOAD_API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                hideLoading();
+                
+                if (result.success) {
+                    return { 
+                        success: true, 
+                        url: result.data.url || result.data.display_url 
+                    };
+                } else {
+                    throw new Error(result.error?.message || 'อัพโหลดรูปภาพล้มเหลว');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Upload Image Error:', error);
+                
+                // ถ้า upload ล้มเหลว ให้ใช้ default image
+                return { 
+                    success: false, 
+                    error: error.message,
+                    url: CONFIG.DEFAULT_IMAGE
+                };
+            }
+        }
+
+        async function uploadImageToGoogleAppsScript() {
+            try {
+                if (!selectedImageFile) {
+                    const existingImageUrl = document.getElementById('itemImageInput').value;
+                    return { 
+                        success: true, 
+                        url: existingImageUrl || CONFIG.DEFAULT_IMAGE 
+                    };
+                }
+                
+                showLoading();
+                
+                // Convert image to base64
+                const base64Image = await getBase64Image(selectedImageFile);
+                
+                // ส่งไปยัง Google Apps Script API
                 const result = await callAPI('uploadImage', {
                     imageData: base64Image,
                     fileName: selectedImageFile.name,
@@ -1635,12 +1688,20 @@
                 hideLoading();
                 console.error('Upload Image Error:', error);
                 
-                // ถ้า upload ล้มเหลว ให้ใช้ default image
-                return { 
-                    success: false, 
-                    error: error.message,
-                    url: CONFIG.DEFAULT_IMAGE
-                };
+                // ลองใช้ ImgBB ถ้า Google Apps Script ล้มเหลว
+                console.log('Trying ImgBB as fallback...');
+                const imgbbResult = await uploadImageToImgBB();
+                return imgbbResult;
+            }
+        }
+
+        async function uploadImage() {
+            // ลองใช้ Google Apps Script ก่อน ถ้าล้มเหลวใช้ ImgBB
+            try {
+                return await uploadImageToGoogleAppsScript();
+            } catch (error) {
+                console.log('Google Apps Script upload failed, trying ImgBB...');
+                return await uploadImageToImgBB();
             }
         }
 
@@ -2889,7 +2950,7 @@
                 let uploadResult = null;
                 if (selectedImageFile) {
                     try {
-                        uploadResult = await uploadImageToDrive();
+                        uploadResult = await uploadImage();
                         
                         if (uploadResult.success) {
                             itemData.imageUrl = uploadResult.url;
