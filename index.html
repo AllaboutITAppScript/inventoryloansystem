@@ -336,6 +336,49 @@
             border-color: #10b981;
             background: rgba(16, 185, 129, 0.1);
         }
+        .upload-area.uploading {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .uploading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 10px auto;
+        }
+        .uploading .uploading-spinner {
+            display: block;
+        }
+        .uploading #uploadPlaceholder,
+        .uploading #imagePreview {
+            opacity: 0.5;
+        }
+        .image-url-input {
+            margin-top: 10px;
+        }
+        .image-url-note {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .upload-status {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .upload-status.success {
+            color: #10b981;
+        }
+        .upload-status.error {
+            color: #ef4444;
+        }
+        .upload-status.info {
+            color: #3b82f6;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -1256,19 +1299,61 @@
                 <!-- Image Upload Section -->
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">รูปภาพสิ่งของ</label>
-                    <div id="imageUploadArea" class="upload-area" onclick="document.getElementById('itemImageFile').click()">
-                        <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
-                        <div id="uploadPlaceholder">
-                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                            <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ</p>
-                            <p class="text-gray-400 text-sm mt-1">รองรับไฟล์ PNG, JPG, GIF ขนาดไม่เกิน 5MB</p>
+                    
+                    <!-- วิธีที่ 1: อัพโหลดไฟล์ -->
+                    <div class="mb-4">
+                        <div id="imageUploadArea" class="upload-area mb-2" onclick="document.getElementById('itemImageFile').click()">
+                            <input type="file" id="itemImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
+                            <div id="uploadPlaceholder">
+                                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-300">คลิกเพื่ออัพโหลดรูปภาพ (ไม่เกิน 5MB)</p>
+                                <p class="text-gray-400 text-sm mt-1">หรือใช้ URL ด้านล่าง</p>
+                            </div>
+                            <div id="imagePreview" class="hidden">
+                                <img id="previewImage" class="image-preview mx-auto mb-2">
+                                <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
+                            </div>
+                            <div class="uploading-spinner"></div>
                         </div>
-                        <div id="imagePreview" class="hidden">
-                            <img id="previewImage" class="image-preview mx-auto mb-2">
-                            <p class="text-gray-300 text-sm">คลิกเพื่อเปลี่ยนรูปภาพ</p>
-                        </div>
+                        <p class="text-gray-400 text-xs text-center mb-2">
+                            หมายเหตุ: การอัพโหลดไฟล์จะแสดงเฉพาะในเบราว์เซอร์นี้ <br>
+                            ถ้าต้องการเก็บรูปภาพถาวร ให้ใช้ URL ภาพจากภายนอก
+                        </p>
                     </div>
-                    <input type="hidden" id="itemImageInput" value="">
+                    
+                    <!-- วิธีที่ 2: ใส่ URL ภาพ -->
+                    <div class="image-url-input">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">หรือใส่ URL รูปภาพ</label>
+                        <input type="url" id="itemImageUrl" 
+                               class="input-dark w-full" 
+                               placeholder="https://example.com/image.jpg"
+                               oninput="updateImagePreviewFromUrl()">
+                        <p class="image-url-note">
+                            ตัวอย่าง: https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400
+                        </p>
+                    </div>
+                    
+                    <!-- วิธีที่ 3: ใช้รูปภาพสำเร็จรูป -->
+                    <div class="mt-4">
+                        <p class="text-sm font-medium text-gray-300 mb-2">เลือกรูปภาพสำเร็จรูป:</p>
+                        <div class="grid grid-cols-4 gap-2 mb-2">
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100&fit=crop&crop=faces" class="w-full h-20 object-cover rounded">
+                            </button>
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&fit=crop')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=100&fit=crop" class="w-full h-20 object-cover rounded">
+                            </button>
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&fit=crop')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=100&fit=crop" class="w-full h-20 object-cover rounded">
+                            </button>
+                            <button type="button" onclick="selectPresetImage('https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400&fit=crop')" class="p-1 border border-gray-700 rounded hover:border-blue-500">
+                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=100&fit=crop" class="w-full h-20 object-cover rounded">
+                            </button>
+                        </div>
+                        <p class="image-url-note">
+                            รูปภาพจาก Unsplash (ใช้งานฟรี)
+                        </p>
+                    </div>
                 </div>
             </div>
             
@@ -1302,8 +1387,7 @@
         const CONFIG = {
             LIFF_ID: '2008904120-hDgwl23w',
             API_URL: 'https://script.google.com/macros/s/AKfycbxcJL0VOgqZ6tsYqDNiw1U5pFsVlYoI_J7IpCLmp_8UTACxA3y3Ma4Y7WFBrpUXexnWwg/exec',
-            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces',
-            GOOGLE_DRIVE_ID: '1QzTmvz1iN0GKlKjZ2Ep-PWH5JrWYiRmO'
+            DEFAULT_IMAGE: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&fit=crop&crop=faces'
         };
 
         // =============================================
@@ -1525,522 +1609,32 @@
         }
 
         // =============================================
-        // LINE Bot Functions
-        // =============================================
-        function checkTokenFormat() {
-            const tokenInput = document.getElementById('channelAccessToken');
-            const token = tokenInput.value.trim();
-            const tokenStatus = document.getElementById('tokenStatus');
-            
-            if (debounceTimer) {
-                clearTimeout(debounceTimer);
-            }
-            
-            if (!token) {
-                tokenInput.classList.remove('token-valid', 'token-invalid');
-                tokenStatus.classList.add('hidden');
-                updateBotConnectionStatus({ status: 'not_configured' });
-                return false;
-            }
-            
-            let isValidFormat = false;
-            
-            if (token.length >= 30) {
-                isValidFormat = true;
-            }
-            
-            if (isValidFormat) {
-                tokenInput.classList.add('token-valid');
-                tokenInput.classList.remove('token-invalid');
-                tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
-                tokenStatus.classList.remove('hidden');
-                
-                debounceTimer = setTimeout(() => {
-                    autoDetectBotInfo();
-                }, 1500);
-                
-                return true;
-            } else {
-                tokenInput.classList.add('token-invalid');
-                tokenInput.classList.remove('token-valid');
-                tokenStatus.innerHTML = '<i class="fas fa-exclamation-circle text-red-400 mr-1"></i><span class="text-red-400">รูปแบบ Token อาจไม่ถูกต้อง</span>';
-                tokenStatus.classList.remove('hidden');
-                updateBotConnectionStatus({ 
-                    status: 'connection_failed',
-                    message: 'รูปแบบ Token ไม่ถูกต้อง'
-                });
-                return false;
-            }
-        }
-
-        async function autoDetectBotInfo() {
-            const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
-            
-            if (!channelAccessToken) {
-                showMessage('warning', 'กรุณากรอก Channel Access Token', 'ต้องมี Token ในการดึงข้อมูลบอท');
-                return;
-            }
-            
-            try {
-                updateBotConnectionStatus({
-                    status: 'checking',
-                    message: 'กำลังดึงข้อมูลบอท...'
-                });
-                
-                const result = await callAPI('getBotProfile', {
-                    channelAccessToken: channelAccessToken
-                });
-                
-                if (result.success && result.botInfo) {
-                    const botInfo = result.botInfo;
-                    currentBotInfo = botInfo;
-                    
-                    const botNameInput = document.getElementById('botNameInput');
-                    const botPictureUrl = document.getElementById('botPictureUrl');
-                    
-                    if (botInfo.displayName) {
-                        botNameInput.value = botInfo.displayName;
-                        botNameInput.classList.add('auto-fill-success');
-                        setTimeout(() => {
-                            botNameInput.classList.remove('auto-fill-success');
-                        }, 1500);
-                    }
-                    
-                    if (botInfo.pictureUrl) {
-                        botPictureUrl.value = botInfo.pictureUrl;
-                        botPictureUrl.classList.add('auto-fill-success');
-                        setTimeout(() => {
-                            botPictureUrl.classList.remove('auto-fill-success');
-                        }, 1500);
-                    }
-                    
-                    updateBotConnectionStatus({
-                        status: 'connected',
-                        botName: botInfo.displayName,
-                        pictureUrl: botInfo.pictureUrl,
-                        statusMessage: botInfo.statusMessage || 'ระบบยืมคืนออนไลน์'
-                    });
-                    
-                    showNotification('success', 'ดึงข้อมูลบอทสำเร็จ', 'ระบบได้ดึงข้อมูลบอทอัตโนมัติแล้ว');
-                    
-                } else {
-                    updateBotConnectionStatus({
-                        status: 'connection_failed',
-                        message: result.message || 'ไม่สามารถดึงข้อมูลบอทได้'
-                    });
-                    
-                    const botNameInput = document.getElementById('botNameInput');
-                    const channelSecret = document.getElementById('channelSecret').value.trim();
-                    if (channelSecret && !botNameInput.value.trim()) {
-                        botNameInput.value = `LINE Bot ${channelSecret.substring(0, 8)}`;
-                    }
-                    
-                    updateBotConnectionStatus({
-                        status: 'connected',
-                        botName: botNameInput.value || 'LINE Bot'
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Auto-detect bot info failed:', error);
-                updateBotConnectionStatus({
-                    status: 'connection_failed',
-                    message: 'เกิดข้อผิดพลาดในการดึงข้อมูล'
-                });
-                
-                showMessage('error', 'ไม่สามารถดึงข้อมูลบอทอัตโนมัติ', 'คุณยังสามารถกรอกข้อมูลบอทด้วยตนเองได้');
-            }
-        }
-
-        async function loadBotSettings() {
-            try {
-                showLoading();
-                const data = await callAPI('getBotSettings');
-                
-                if (data.success && data.settings) {
-                    const channelAccessToken = document.getElementById('channelAccessToken');
-                    const channelSecret = document.getElementById('channelSecret');
-                    const botNameInput = document.getElementById('botNameInput');
-                    const botPictureUrl = document.getElementById('botPictureUrl');
-                    
-                    const tokenValue = data.settings.channel_access_token?.value || '';
-                    const secretValue = data.settings.channel_secret?.value || '';
-                    
-                    channelAccessToken.value = tokenValue;
-                    channelSecret.value = secretValue;
-                    
-                    botNameInput.value = data.settings.bot_name?.value || '';
-                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
-                    
-                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
-                    
-                    const notificationEnabled = document.getElementById('notificationEnabled');
-                    const notifyOnRequest = document.getElementById('notifyOnRequest');
-                    const notifyOnApprove = document.getElementById('notifyOnApprove');
-                    const notifyOnReject = document.getElementById('notifyOnReject');
-                    const notifyOnReturn = document.getElementById('notifyOnReturn');
-                    const notifyDueReminder = document.getElementById('notifyDueReminder');
-                    const notifyOverdue = document.getElementById('notifyOverdue');
-                    
-                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
-                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
-                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
-                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
-                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
-                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
-                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
-                    
-                    if (tokenValue.trim()) {
-                        setTimeout(() => {
-                            checkTokenFormat();
-                        }, 500);
-                    } else {
-                        updateBotConnectionStatus({ status: 'not_configured' });
-                    }
-                    
-                    hideLoading();
-                    showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
-                } else {
-                    hideLoading();
-                    showMessage('info', 'ยังไม่มีการตั้งค่า', 'กรุณาตั้งค่า LINE Bot ใหม่');
-                }
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Error loading bot settings:', error);
-                showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
-                
-                document.getElementById('notificationEnabled').checked = true;
-                document.getElementById('notifyOnRequest').checked = true;
-                document.getElementById('notifyOnApprove').checked = true;
-                document.getElementById('notifyOnReject').checked = true;
-                document.getElementById('notifyOnReturn').checked = true;
-                document.getElementById('notifyDueReminder').checked = true;
-                document.getElementById('notifyOverdue').checked = true;
-            }
-        }
-
-        async function saveBotSettings() {
-            try {
-                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
-                
-                if (!channelAccessToken) {
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'กรุณากรอก Channel Access Token',
-                        text: 'ต้องมี Channel Access Token เพื่อใช้งาน LINE Bot',
-                        confirmButtonText: 'ตกลง',
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    return;
-                }
-                
-                if (channelAccessToken.length < 30) {
-                    const { value: confirm } = await Swal.fire({
-                        icon: 'question',
-                        title: 'รูปแบบ Token อาจไม่ถูกต้อง',
-                        html: `Channel Access Token ของคุณดูเหมือนจะสั้นเกินไป<br>
-                              <small>รูปแบบมาตรฐานควรมีความยาวอย่างน้อย 30 ตัวอักษร</small>`,
-                        showCancelButton: true,
-                        confirmButtonText: 'ใช้ตามนี้',
-                        cancelButtonText: 'แก้ไข',
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    if (!confirm) {
-                        document.getElementById('channelAccessToken').focus();
-                        return;
-                    }
-                }
-                
-                const botSettings = {
-                    channel_access_token: {
-                        value: channelAccessToken,
-                        description: 'Channel Access Token สำหรับ LINE Messaging API',
-                        isActive: true
-                    },
-                    channel_secret: {
-                        value: document.getElementById('channelSecret').value.trim(),
-                        description: 'Channel Secret สำหรับ LINE Messaging API',
-                        isActive: true
-                    },
-                    bot_name: {
-                        value: document.getElementById('botNameInput').value.trim(),
-                        description: 'ชื่อของบอทที่แสดงใน LINE',
-                        isActive: true
-                    },
-                    bot_picture_url: {
-                        value: document.getElementById('botPictureUrl').value.trim(),
-                        description: 'URL รูปภาพโปรไฟล์บอท',
-                        isActive: true
-                    },
-                    admin_notify_group: {
-                        value: document.getElementById('adminNotifyGroup').value.trim(),
-                        description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
-                        isActive: true
-                    },
-                    notification_enabled: {
-                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
-                        description: 'เปิดใช้งานการแจ้งเตือน',
-                        isActive: true
-                    },
-                    notify_on_request: {
-                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
-                        isActive: true
-                    },
-                    notify_on_approve: {
-                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
-                        isActive: true
-                    },
-                    notify_on_reject: {
-                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
-                        isActive: true
-                    },
-                    notify_on_return: {
-                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อมีการคืนของ',
-                        isActive: true
-                    },
-                    notify_due_reminder: {
-                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
-                        isActive: true
-                    },
-                    notify_overdue: {
-                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
-                        description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
-                        isActive: true
-                    }
-                };
-                
-                showLoading();
-                
-                const result = await callAPI('updateBotSettings', {
-                    settings: JSON.stringify(botSettings)
-                });
-                
-                hideLoading();
-                
-                if (result.success) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'บันทึกสำเร็จ',
-                        text: 'บันทึกการตั้งค่า LINE Bot สำเร็จ!',
-                        timer: 3000,
-                        showConfirmButton: false,
-                        background: '#1e293b',
-                        color: '#e2e8f0'
-                    });
-                    
-                    if (channelAccessToken) {
-                        const botName = botSettings.bot_name.value || 'LINE Bot';
-                        updateBotConnectionStatus({
-                            status: 'connected',
-                            botName: botName
-                        });
-                    }
-                    
-                    setTimeout(() => {
-                        autoDetectBotInfo();
-                    }, 1000);
-                    
-                    showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
-                    
-                } else {
-                    throw new Error(result.message || 'ไม่สามารถบันทึกได้');
-                }
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Error saving bot settings:', error);
-                
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'ไม่สามารถบันทึกได้',
-                    html: `เกิดข้อผิดพลาดในการบันทึก: <br><small>${error.message}</small>`,
-                    confirmButtonText: 'ตกลง',
-                    background: '#1e293b',
-                    color: '#e2e8f0'
-                });
-            }
-        }
-
-        async function testBotConnection() {
-            try {
-                showLoading();
-                
-                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
-                
-                if (!channelAccessToken) {
-                    showMessage('error', 'กรุณากรอก Channel Access Token ก่อน', 'ต้องมี Token ในการทดสอบการเชื่อมต่อ');
-                    hideLoading();
-                    return;
-                }
-                
-                const result = await callAPI('testBotConnection');
-                
-                hideLoading();
-                
-                if (result.success) {
-                    const testResult = result.testResult;
-                    
-                    if (testResult.success) {
-                        const botName = result.botName || testResult.botInfo?.displayName || 'LINE Bot';
-                        
-                        const botNameInput = document.getElementById('botNameInput');
-                        const botPictureUrl = document.getElementById('botPictureUrl');
-                        
-                        if (!botNameInput.value.trim() && testResult.botInfo?.displayName) {
-                            botNameInput.value = testResult.botInfo.displayName;
-                        }
-                        
-                        if (!botPictureUrl.value.trim() && testResult.botInfo?.pictureUrl) {
-                            botPictureUrl.value = testResult.botInfo.pictureUrl;
-                        }
-                        
-                        updateBotInfo(testResult.botInfo);
-                        
-                        showMessage('success', 'ทดสอบสำเร็จ', `เชื่อมต่อกับ LINE Bot "${botName}" สำเร็จ!`);
-                        
-                    } else {
-                        showMessage('error', 'ทดสอบล้มเหลว', result.message || 'ไม่สามารถเชื่อมต่อกับ LINE Bot ได้');
-                    }
-                }
-                
-            } catch (error) {
-                hideLoading();
-                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
-            }
-        }
-
-        function updateBotConnectionStatus(status) {
-            const statusIndicator = document.getElementById('botStatusIndicator');
-            const statusText = document.getElementById('botStatusText');
-            const botInfoCard = document.getElementById('botInfoCard');
-            const connectionStatusDiv = document.getElementById('botConnectionStatus');
-            
-            if (!status) return;
-            
-            switch(status.status) {
-                case 'checking':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500 animate-pulse';
-                    statusText.textContent = status.message || 'กำลังตรวจสอบ...';
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
-                    botInfoCard.classList.add('hidden');
-                    break;
-                    
-                case 'connected':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
-                    statusText.textContent = 'เชื่อมต่อแล้ว: ' + (status.botName || 'LINE Bot');
-                    connectionStatusDiv.querySelector('div').classList.add('bot-status-connected');
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-disconnected');
-                    botInfoCard.classList.remove('hidden');
-                    
-                    updateBotInfo({
-                        displayName: status.botName,
-                        pictureUrl: status.pictureUrl,
-                        statusMessage: status.statusMessage
-                    });
-                    break;
-                    
-                case 'not_configured':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
-                    statusText.textContent = 'ยังไม่ได้ตั้งค่า';
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
-                    botInfoCard.classList.add('hidden');
-                    break;
-                    
-                case 'connection_failed':
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
-                    statusText.textContent = status.message || 'เชื่อมต่อล้มเหลว';
-                    connectionStatusDiv.querySelector('div').classList.add('bot-status-disconnected');
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected');
-                    botInfoCard.classList.remove('hidden');
-                    break;
-                    
-                default:
-                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-500';
-                    statusText.textContent = 'ไม่ทราบสถานะ';
-                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
-                    botInfoCard.classList.add('hidden');
-            }
-        }
-
-        function updateBotInfo(info) {
-            if (!info) return;
-            
-            const botPicture = document.getElementById('botPicture');
-            const botName = document.getElementById('botName');
-            const botStatusMessage = document.getElementById('botStatusMessage');
-            const botLastTested = document.getElementById('botLastTested');
-            
-            if (info.pictureUrl) {
-                botPicture.src = info.pictureUrl;
-            } else if (info.displayName) {
-                const displayName = info.displayName || 'Bot';
-                botPicture.src = 'https://ui-avatars.com/api/?name=' + 
-                    encodeURIComponent(displayName) + 
-                    '&background=00C300&color=fff&size=128';
-            }
-            
-            if (info.displayName) {
-                botName.textContent = info.displayName;
-            }
-            
-            if (info.statusMessage) {
-                botStatusMessage.textContent = info.statusMessage;
-            }
-            
-            botLastTested.textContent = 'อัพเดตล่าสุด: ' + formatTime(new Date());
-            
-            const botNameInput = document.getElementById('botNameInput');
-            const botPictureUrl = document.getElementById('botPictureUrl');
-            
-            if (info.displayName) {
-                botNameInput.value = info.displayName;
-                botNameInput.classList.add('auto-fill-success');
-                setTimeout(() => {
-                    botNameInput.classList.remove('auto-fill-success');
-                }, 1500);
-            }
-            
-            if (info.pictureUrl) {
-                botPictureUrl.value = info.pictureUrl;
-                botPictureUrl.classList.add('auto-fill-success');
-                setTimeout(() => {
-                    botPictureUrl.classList.remove('auto-fill-success');
-                }, 1500);
-            }
-        }
-
-        // =============================================
-        // Image Upload Functions
+        // Image Upload Functions (แบบใหม่ - ใช้ URL ภาพโดยตรง)
         // =============================================
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             
             // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
-                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF)');
+                showMessage('error', 'รูปแบบไฟล์ไม่รองรับ', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF, WEBP)');
+                document.getElementById('itemImageFile').value = '';
+                selectedImageFile = null;
                 return;
             }
             
             // Validate file size (5MB)
             if (file.size > 5 * 1024 * 1024) {
                 showMessage('error', 'ไฟล์มีขนาดใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 5MB');
+                document.getElementById('itemImageFile').value = '';
+                selectedImageFile = null;
                 return;
             }
             
             selectedImageFile = file;
             
-            // Show preview
+            // Show preview (เฉพาะในเบราว์เซอร์)
             const reader = new FileReader();
             reader.onload = function(e) {
                 const previewImage = document.getElementById('previewImage');
@@ -2050,56 +1644,57 @@
                 previewImage.src = e.target.result;
                 uploadPlaceholder.classList.add('hidden');
                 imagePreview.classList.remove('hidden');
+                
+                // แจ้งเตือนให้ผู้ใช้ทราบ
+                showMessage('info', 'รูปภาพแสดงตัวอย่าง', 'รูปภาพนี้แสดงเฉพาะในเบราว์เซอร์นี้เท่านั้น');
+            };
+            reader.onerror = function(error) {
+                console.error('Error reading file:', error);
+                showMessage('error', 'ไม่สามารถอ่านไฟล์ได้', 'กรุณาเลือกไฟล์อื่น');
+                document.getElementById('itemImageFile').value = '';
+                selectedImageFile = null;
             };
             reader.readAsDataURL(file);
         }
 
-        async function uploadImageToDrive() {
-            if (!selectedImageFile) {
-                return { success: true, url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE };
+        function updateImagePreviewFromUrl() {
+            const url = document.getElementById('itemImageUrl').value;
+            if (url && url.startsWith('http')) {
+                const previewImage = document.getElementById('previewImage');
+                const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+                const imagePreview = document.getElementById('imagePreview');
+                
+                previewImage.src = url;
+                uploadPlaceholder.classList.add('hidden');
+                imagePreview.classList.remove('hidden');
+            }
+        }
+
+        function selectPresetImage(url) {
+            document.getElementById('itemImageUrl').value = url;
+            updateImagePreviewFromUrl();
+        }
+
+        function getImageUrlFromInputs() {
+            // ตรวจสอบ URL ก่อน
+            const urlInput = document.getElementById('itemImageUrl').value;
+            if (urlInput && urlInput.startsWith('http')) {
+                return urlInput;
             }
             
-            try {
-                showLoading();
-                
-                // Convert file to base64 for API submission
-                const reader = new FileReader();
-                reader.readAsDataURL(selectedImageFile);
-                
+            // ถ้าไม่มี URL แต่มีไฟล์ ให้แปลงเป็น Data URL (เฉพาะในเบราว์เซอร์)
+            if (selectedImageFile) {
                 return new Promise((resolve) => {
-                    reader.onload = async function() {
-                        const base64Data = reader.result.split(',')[1];
-                        
-                        const result = await callAPI('uploadImage', {
-                            fileName: selectedImageFile.name,
-                            mimeType: selectedImageFile.type,
-                            base64Data: base64Data
-                        });
-                        
-                        hideLoading();
-                        
-                        if (result.success) {
-                            resolve({ success: true, url: result.imageUrl });
-                        } else {
-                            showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', result.error || 'เกิดข้อผิดพลาด');
-                            resolve({ 
-                                success: false, 
-                                error: result.error,
-                                url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
-                            });
-                        }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        resolve(e.target.result);
                     };
+                    reader.readAsDataURL(selectedImageFile);
                 });
-                
-            } catch (error) {
-                hideLoading();
-                console.error('Upload Image Error:', error);
-                return { 
-                    success: false, 
-                    error: error.message,
-                    url: document.getElementById('itemImageInput').value || CONFIG.DEFAULT_IMAGE
-                };
             }
+            
+            // ถ้าไม่มีอะไรเลย ใช้รูปภาพเริ่มต้น
+            return CONFIG.DEFAULT_IMAGE;
         }
 
         // =============================================
@@ -2107,8 +1702,7 @@
         // =============================================
         async function callAPI(action, data = {}) {
             try {
-                showLoading();
-                
+                // Remove image upload handling since we're not uploading to Google Drive anymore
                 const params = new URLSearchParams({
                     action: action,
                     uid: currentUser?.uid || '',
@@ -2129,8 +1723,6 @@
                 
                 const result = await response.json();
                 
-                hideLoading();
-                
                 if (!result.success) {
                     throw new Error(result.error || result.message || 'API Error');
                 }
@@ -2138,7 +1730,6 @@
                 return result;
                 
             } catch (error) {
-                hideLoading();
                 console.error('API Call Error:', error);
                 
                 let errorMessage = error.message;
@@ -2215,6 +1806,8 @@
                     background: '#1e293b',
                     color: '#e2e8f0'
                 });
+            } finally {
+                hideLoading();
             }
         }
 
@@ -3163,6 +2756,9 @@
             }
         }
 
+        // =============================================
+        // Item Management Functions
+        // =============================================
         async function loadItemsForManagement() {
             try {
                 const data = await callAPI('getItemsForManagement');
@@ -3257,13 +2853,18 @@
                     document.getElementById('itemCategoryInput').value = item.category || 'book';
                     document.getElementById('itemQuantityInput').value = item.quantity || 1;
                     document.getElementById('itemLocationInput').value = item.location || '';
-                    document.getElementById('itemImageInput').value = item.imageUrl || '';
+                    document.getElementById('itemImageUrl').value = item.imageUrl || '';
                     
                     const uploadPlaceholder = document.getElementById('uploadPlaceholder');
                     const imagePreview = document.getElementById('imagePreview');
                     const previewImage = document.getElementById('previewImage');
                     
-                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE) {
+                    if (item.imageUrl && item.imageUrl !== CONFIG.DEFAULT_IMAGE && item.imageUrl.startsWith('http')) {
+                        previewImage.src = item.imageUrl;
+                        uploadPlaceholder.classList.add('hidden');
+                        imagePreview.classList.remove('hidden');
+                    } else if (item.imageUrl && item.imageUrl.startsWith('data:')) {
+                        // ถ้าเป็น data URL จากไฟล์ที่อัพโหลด
                         previewImage.src = item.imageUrl;
                         uploadPlaceholder.classList.add('hidden');
                         imagePreview.classList.remove('hidden');
@@ -3286,26 +2887,14 @@
                 const itemId = document.getElementById('itemIdInput').value;
                 const isEdit = !!itemId;
                 
-                // Upload image first if selected
-                let imageUrl = document.getElementById('itemImageInput').value;
-                if (selectedImageFile) {
-                    const uploadResult = await uploadImageToDrive();
-                    if (uploadResult.success && uploadResult.url) {
-                        imageUrl = uploadResult.url;
-                    } else if (uploadResult.error) {
-                        showMessage('error', 'อัพโหลดรูปภาพล้มเหลว', uploadResult.error);
-                        return;
-                    }
-                }
-                
+                // ตรวจสอบข้อมูลที่จำเป็น
                 const itemData = {
                     itemId: itemId,
                     itemName: document.getElementById('itemNameInput').value.trim(),
                     description: document.getElementById('itemDescInput').value.trim(),
                     category: document.getElementById('itemCategoryInput').value,
                     quantity: parseInt(document.getElementById('itemQuantityInput').value),
-                    location: document.getElementById('itemLocationInput').value.trim(),
-                    imageUrl: imageUrl || CONFIG.DEFAULT_IMAGE
+                    location: document.getElementById('itemLocationInput').value.trim()
                 };
                 
                 if (!itemData.itemName) {
@@ -3318,10 +2907,30 @@
                     return;
                 }
                 
+                // ตรวจสอบ URL ภาพ
+                const imageUrlInput = document.getElementById('itemImageUrl').value;
+                if (imageUrlInput && imageUrlInput.startsWith('http')) {
+                    itemData.imageUrl = imageUrlInput;
+                } else if (selectedImageFile) {
+                    // แปลงไฟล์เป็น Data URL
+                    const dataUrl = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            resolve(e.target.result);
+                        };
+                        reader.readAsDataURL(selectedImageFile);
+                    });
+                    itemData.imageUrl = dataUrl;
+                } else {
+                    itemData.imageUrl = CONFIG.DEFAULT_IMAGE;
+                }
+                
                 const action = isEdit ? 'updateItem' : 'addItem';
                 const successMessage = isEdit ? 'อัปเดตสิ่งของสำเร็จ!' : 'เพิ่มสิ่งของสำเร็จ!';
                 
+                showLoading();
                 const result = await callAPI(action, itemData);
+                hideLoading();
                 
                 if (result.success) {
                     Swal.fire({
@@ -3344,6 +2953,7 @@
                 }
                 
             } catch (error) {
+                hideLoading();
                 Swal.fire({
                     icon: 'error',
                     title: 'ไม่สามารถบันทึกได้',
@@ -3405,19 +3015,25 @@
             document.getElementById('saveItemBtn').textContent = 'บันทึก';
             document.getElementById('addItemModal').classList.remove('hidden');
             
+            // Reset all fields
             document.getElementById('itemIdInput').value = '';
             document.getElementById('itemNameInput').value = '';
             document.getElementById('itemDescInput').value = '';
             document.getElementById('itemLocationInput').value = '';
-            document.getElementById('itemImageInput').value = '';
+            document.getElementById('itemImageUrl').value = '';
             document.getElementById('itemQuantityInput').value = '1';
             document.getElementById('itemCategoryInput').value = 'book';
             
             const uploadPlaceholder = document.getElementById('uploadPlaceholder');
             const imagePreview = document.getElementById('imagePreview');
+            const previewImage = document.getElementById('previewImage');
+            
             uploadPlaceholder.classList.remove('hidden');
             imagePreview.classList.add('hidden');
+            previewImage.src = '';
             
+            // Reset file input
+            document.getElementById('itemImageFile').value = '';
             selectedImageFile = null;
         }
 
@@ -4008,6 +3624,500 @@
         }
 
         // =============================================
+        // LINE Bot Functions
+        // =============================================
+        function checkTokenFormat() {
+            const tokenInput = document.getElementById('channelAccessToken');
+            const token = tokenInput.value.trim();
+            const tokenStatus = document.getElementById('tokenStatus');
+            
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            
+            if (!token) {
+                tokenInput.classList.remove('token-valid', 'token-invalid');
+                tokenStatus.classList.add('hidden');
+                updateBotConnectionStatus({ status: 'not_configured' });
+                return false;
+            }
+            
+            let isValidFormat = false;
+            
+            if (token.length >= 30) {
+                isValidFormat = true;
+            }
+            
+            if (isValidFormat) {
+                tokenInput.classList.add('token-valid');
+                tokenInput.classList.remove('token-invalid');
+                tokenStatus.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i><span class="text-green-400">รูปแบบ Token ถูกต้อง</span>';
+                tokenStatus.classList.remove('hidden');
+                
+                debounceTimer = setTimeout(() => {
+                    autoDetectBotInfo();
+                }, 1500);
+                
+                return true;
+            } else {
+                tokenInput.classList.add('token-invalid');
+                tokenInput.classList.remove('token-valid');
+                tokenStatus.innerHTML = '<i class="fas fa-exclamation-circle text-red-400 mr-1"></i><span class="text-red-400">รูปแบบ Token อาจไม่ถูกต้อง</span>';
+                tokenStatus.classList.remove('hidden');
+                updateBotConnectionStatus({ 
+                    status: 'connection_failed',
+                    message: 'รูปแบบ Token ไม่ถูกต้อง'
+                });
+                return false;
+            }
+        }
+
+        async function autoDetectBotInfo() {
+            const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+            
+            if (!channelAccessToken) {
+                showMessage('warning', 'กรุณากรอก Channel Access Token', 'ต้องมี Token ในการดึงข้อมูลบอท');
+                return;
+            }
+            
+            try {
+                updateBotConnectionStatus({
+                    status: 'checking',
+                    message: 'กำลังดึงข้อมูลบอท...'
+                });
+                
+                const result = await callAPI('getBotProfile', {
+                    channelAccessToken: channelAccessToken
+                });
+                
+                if (result.success && result.botInfo) {
+                    const botInfo = result.botInfo;
+                    currentBotInfo = botInfo;
+                    
+                    const botNameInput = document.getElementById('botNameInput');
+                    const botPictureUrl = document.getElementById('botPictureUrl');
+                    
+                    if (botInfo.displayName) {
+                        botNameInput.value = botInfo.displayName;
+                        botNameInput.classList.add('auto-fill-success');
+                        setTimeout(() => {
+                            botNameInput.classList.remove('auto-fill-success');
+                        }, 1500);
+                    }
+                    
+                    if (botInfo.pictureUrl) {
+                        botPictureUrl.value = botInfo.pictureUrl;
+                        botPictureUrl.classList.add('auto-fill-success');
+                        setTimeout(() => {
+                            botPictureUrl.classList.remove('auto-fill-success');
+                        }, 1500);
+                    }
+                    
+                    updateBotConnectionStatus({
+                        status: 'connected',
+                        botName: botInfo.displayName,
+                        pictureUrl: botInfo.pictureUrl,
+                        statusMessage: botInfo.statusMessage || 'ระบบยืมคืนออนไลน์'
+                    });
+                    
+                    showNotification('success', 'ดึงข้อมูลบอทสำเร็จ', 'ระบบได้ดึงข้อมูลบอทอัตโนมัติแล้ว');
+                    
+                } else {
+                    updateBotConnectionStatus({
+                        status: 'connection_failed',
+                        message: result.message || 'ไม่สามารถดึงข้อมูลบอทได้'
+                    });
+                    
+                    const botNameInput = document.getElementById('botNameInput');
+                    const channelSecret = document.getElementById('channelSecret').value.trim();
+                    if (channelSecret && !botNameInput.value.trim()) {
+                        botNameInput.value = `LINE Bot ${channelSecret.substring(0, 8)}`;
+                    }
+                    
+                    updateBotConnectionStatus({
+                        status: 'connected',
+                        botName: botNameInput.value || 'LINE Bot'
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Auto-detect bot info failed:', error);
+                updateBotConnectionStatus({
+                    status: 'connection_failed',
+                    message: 'เกิดข้อผิดพลาดในการดึงข้อมูล'
+                });
+                
+                showMessage('error', 'ไม่สามารถดึงข้อมูลบอทอัตโนมัติ', 'คุณยังสามารถกรอกข้อมูลบอทด้วยตนเองได้');
+            }
+        }
+
+        async function loadBotSettings() {
+            try {
+                showLoading();
+                const data = await callAPI('getBotSettings');
+                
+                if (data.success && data.settings) {
+                    const channelAccessToken = document.getElementById('channelAccessToken');
+                    const channelSecret = document.getElementById('channelSecret');
+                    const botNameInput = document.getElementById('botNameInput');
+                    const botPictureUrl = document.getElementById('botPictureUrl');
+                    
+                    const tokenValue = data.settings.channel_access_token?.value || '';
+                    const secretValue = data.settings.channel_secret?.value || '';
+                    
+                    channelAccessToken.value = tokenValue;
+                    channelSecret.value = secretValue;
+                    
+                    botNameInput.value = data.settings.bot_name?.value || '';
+                    botPictureUrl.value = data.settings.bot_picture_url?.value || '';
+                    
+                    document.getElementById('adminNotifyGroup').value = data.settings.admin_notify_group?.value || '';
+                    
+                    const notificationEnabled = document.getElementById('notificationEnabled');
+                    const notifyOnRequest = document.getElementById('notifyOnRequest');
+                    const notifyOnApprove = document.getElementById('notifyOnApprove');
+                    const notifyOnReject = document.getElementById('notifyOnReject');
+                    const notifyOnReturn = document.getElementById('notifyOnReturn');
+                    const notifyDueReminder = document.getElementById('notifyDueReminder');
+                    const notifyOverdue = document.getElementById('notifyOverdue');
+                    
+                    notificationEnabled.checked = data.settings.notification_enabled?.value === 'true' || true;
+                    notifyOnRequest.checked = data.settings.notify_on_request?.value === 'true' || true;
+                    notifyOnApprove.checked = data.settings.notify_on_approve?.value === 'true' || true;
+                    notifyOnReject.checked = data.settings.notify_on_reject?.value === 'true' || true;
+                    notifyOnReturn.checked = data.settings.notify_on_return?.value === 'true' || true;
+                    notifyDueReminder.checked = data.settings.notify_due_reminder?.value === 'true' || true;
+                    notifyOverdue.checked = data.settings.notify_overdue?.value === 'true' || true;
+                    
+                    if (tokenValue.trim()) {
+                        setTimeout(() => {
+                            checkTokenFormat();
+                        }, 500);
+                    } else {
+                        updateBotConnectionStatus({ status: 'not_configured' });
+                    }
+                    
+                    hideLoading();
+                    showNotification('success', 'โหลดการตั้งค่าเสร็จสิ้น', 'ดึงการตั้งค่าจากเซิร์ฟเวอร์เรียบร้อยแล้ว');
+                } else {
+                    hideLoading();
+                    showMessage('info', 'ยังไม่มีการตั้งค่า', 'กรุณาตั้งค่า LINE Bot ใหม่');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error loading bot settings:', error);
+                showMessage('error', 'ไม่สามารถโหลดการตั้งค่าได้', error.message);
+                
+                document.getElementById('notificationEnabled').checked = true;
+                document.getElementById('notifyOnRequest').checked = true;
+                document.getElementById('notifyOnApprove').checked = true;
+                document.getElementById('notifyOnReject').checked = true;
+                document.getElementById('notifyOnReturn').checked = true;
+                document.getElementById('notifyDueReminder').checked = true;
+                document.getElementById('notifyOverdue').checked = true;
+            }
+        }
+
+        async function saveBotSettings() {
+            try {
+                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+                
+                if (!channelAccessToken) {
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'กรุณากรอก Channel Access Token',
+                        text: 'ต้องมี Channel Access Token เพื่อใช้งาน LINE Bot',
+                        confirmButtonText: 'ตกลง',
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    return;
+                }
+                
+                if (channelAccessToken.length < 30) {
+                    const { value: confirm } = await Swal.fire({
+                        icon: 'question',
+                        title: 'รูปแบบ Token อาจไม่ถูกต้อง',
+                        html: `Channel Access Token ของคุณดูเหมือนจะสั้นเกินไป<br>
+                              <small>รูปแบบมาตรฐานควรมีความยาวอย่างน้อย 30 ตัวอักษร</small>`,
+                        showCancelButton: true,
+                        confirmButtonText: 'ใช้ตามนี้',
+                        cancelButtonText: 'แก้ไข',
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    
+                    if (!confirm) {
+                        document.getElementById('channelAccessToken').focus();
+                        return;
+                    }
+                }
+                
+                const botSettings = {
+                    channel_access_token: {
+                        value: channelAccessToken,
+                        description: 'Channel Access Token สำหรับ LINE Messaging API',
+                        isActive: true
+                    },
+                    channel_secret: {
+                        value: document.getElementById('channelSecret').value.trim(),
+                        description: 'Channel Secret สำหรับ LINE Messaging API',
+                        isActive: true
+                    },
+                    bot_name: {
+                        value: document.getElementById('botNameInput').value.trim(),
+                        description: 'ชื่อของบอทที่แสดงใน LINE',
+                        isActive: true
+                    },
+                    bot_picture_url: {
+                        value: document.getElementById('botPictureUrl').value.trim(),
+                        description: 'URL รูปภาพโปรไฟล์บอท',
+                        isActive: true
+                    },
+                    admin_notify_group: {
+                        value: document.getElementById('adminNotifyGroup').value.trim(),
+                        description: 'ID กลุ่ม LINE สำหรับแจ้งเตือนแอดมิน',
+                        isActive: true
+                    },
+                    notification_enabled: {
+                        value: document.getElementById('notificationEnabled').checked ? 'true' : 'false',
+                        description: 'เปิดใช้งานการแจ้งเตือน',
+                        isActive: true
+                    },
+                    notify_on_request: {
+                        value: document.getElementById('notifyOnRequest').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อมีคำขอยืมใหม่',
+                        isActive: true
+                    },
+                    notify_on_approve: {
+                        value: document.getElementById('notifyOnApprove').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อคำขอยืมได้รับการอนุมัติ',
+                        isActive: true
+                    },
+                    notify_on_reject: {
+                        value: document.getElementById('notifyOnReject').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อคำขอยืมถูกปฏิเสธ',
+                        isActive: true
+                    },
+                    notify_on_return: {
+                        value: document.getElementById('notifyOnReturn').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อมีการคืนของ',
+                        isActive: true
+                    },
+                    notify_due_reminder: {
+                        value: document.getElementById('notifyDueReminder').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเตือนก่อนกำหนดคืน',
+                        isActive: true
+                    },
+                    notify_overdue: {
+                        value: document.getElementById('notifyOverdue').checked ? 'true' : 'false',
+                        description: 'แจ้งเตือนเมื่อเกินกำหนดคืน',
+                        isActive: true
+                    }
+                };
+                
+                showLoading();
+                
+                const result = await callAPI('updateBotSettings', {
+                    settings: JSON.stringify(botSettings)
+                });
+                
+                hideLoading();
+                
+                if (result.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ',
+                        text: 'บันทึกการตั้งค่า LINE Bot สำเร็จ!',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#1e293b',
+                        color: '#e2e8f0'
+                    });
+                    
+                    if (channelAccessToken) {
+                        const botName = botSettings.bot_name.value || 'LINE Bot';
+                        updateBotConnectionStatus({
+                            status: 'connected',
+                            botName: botName
+                        });
+                    }
+                    
+                    setTimeout(() => {
+                        autoDetectBotInfo();
+                    }, 1000);
+                    
+                    showNotification('success', 'บันทึกการตั้งค่าเสร็จสิ้น', 'การตั้งค่าถูกบันทึกเรียบร้อยแล้ว');
+                    
+                } else {
+                    throw new Error(result.message || 'ไม่สามารถบันทึกได้');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error saving bot settings:', error);
+                
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถบันทึกได้',
+                    html: `เกิดข้อผิดพลาดในการบันทึก: <br><small>${error.message}</small>`,
+                    confirmButtonText: 'ตกลง',
+                    background: '#1e293b',
+                    color: '#e2e8f0'
+                });
+            }
+        }
+
+        async function testBotConnection() {
+            try {
+                showLoading();
+                
+                const channelAccessToken = document.getElementById('channelAccessToken').value.trim();
+                
+                if (!channelAccessToken) {
+                    showMessage('error', 'กรุณากรอก Channel Access Token ก่อน', 'ต้องมี Token ในการทดสอบการเชื่อมต่อ');
+                    hideLoading();
+                    return;
+                }
+                
+                const result = await callAPI('testBotConnection');
+                
+                hideLoading();
+                
+                if (result.success) {
+                    const testResult = result.testResult;
+                    
+                    if (testResult.success) {
+                        const botName = result.botName || testResult.botInfo?.displayName || 'LINE Bot';
+                        
+                        const botNameInput = document.getElementById('botNameInput');
+                        const botPictureUrl = document.getElementById('botPictureUrl');
+                        
+                        if (!botNameInput.value.trim() && testResult.botInfo?.displayName) {
+                            botNameInput.value = testResult.botInfo.displayName;
+                        }
+                        
+                        if (!botPictureUrl.value.trim() && testResult.botInfo?.pictureUrl) {
+                            botPictureUrl.value = testResult.botInfo.pictureUrl;
+                        }
+                        
+                        updateBotInfo(testResult.botInfo);
+                        
+                        showMessage('success', 'ทดสอบสำเร็จ', `เชื่อมต่อกับ LINE Bot "${botName}" สำเร็จ!`);
+                        
+                    } else {
+                        showMessage('error', 'ทดสอบล้มเหลว', result.message || 'ไม่สามารถเชื่อมต่อกับ LINE Bot ได้');
+                    }
+                }
+                
+            } catch (error) {
+                hideLoading();
+                showMessage('error', 'เกิดข้อผิดพลาด', error.message);
+            }
+        }
+
+        function updateBotConnectionStatus(status) {
+            const statusIndicator = document.getElementById('botStatusIndicator');
+            const statusText = document.getElementById('botStatusText');
+            const botInfoCard = document.getElementById('botInfoCard');
+            const connectionStatusDiv = document.getElementById('botConnectionStatus');
+            
+            if (!status) return;
+            
+            switch(status.status) {
+                case 'checking':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500 animate-pulse';
+                    statusText.textContent = status.message || 'กำลังตรวจสอบ...';
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
+                    botInfoCard.classList.add('hidden');
+                    break;
+                    
+                case 'connected':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
+                    statusText.textContent = 'เชื่อมต่อแล้ว: ' + (status.botName || 'LINE Bot');
+                    connectionStatusDiv.querySelector('div').classList.add('bot-status-connected');
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-disconnected');
+                    botInfoCard.classList.remove('hidden');
+                    
+                    updateBotInfo({
+                        displayName: status.botName,
+                        pictureUrl: status.pictureUrl,
+                        statusMessage: status.statusMessage
+                    });
+                    break;
+                    
+                case 'not_configured':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-500';
+                    statusText.textContent = 'ยังไม่ได้ตั้งค่า';
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
+                    botInfoCard.classList.add('hidden');
+                    break;
+                    
+                case 'connection_failed':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+                    statusText.textContent = status.message || 'เชื่อมต่อล้มเหลว';
+                    connectionStatusDiv.querySelector('div').classList.add('bot-status-disconnected');
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected');
+                    botInfoCard.classList.remove('hidden');
+                    break;
+                    
+                default:
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-500';
+                    statusText.textContent = 'ไม่ทราบสถานะ';
+                    connectionStatusDiv.querySelector('div').classList.remove('bot-status-connected', 'bot-status-disconnected');
+                    botInfoCard.classList.add('hidden');
+            }
+        }
+
+        function updateBotInfo(info) {
+            if (!info) return;
+            
+            const botPicture = document.getElementById('botPicture');
+            const botName = document.getElementById('botName');
+            const botStatusMessage = document.getElementById('botStatusMessage');
+            const botLastTested = document.getElementById('botLastTested');
+            
+            if (info.pictureUrl) {
+                botPicture.src = info.pictureUrl;
+            } else if (info.displayName) {
+                const displayName = info.displayName || 'Bot';
+                botPicture.src = 'https://ui-avatars.com/api/?name=' + 
+                    encodeURIComponent(displayName) + 
+                    '&background=00C300&color=fff&size=128';
+            }
+            
+            if (info.displayName) {
+                botName.textContent = info.displayName;
+            }
+            
+            if (info.statusMessage) {
+                botStatusMessage.textContent = info.statusMessage;
+            }
+            
+            botLastTested.textContent = 'อัพเดตล่าสุด: ' + formatTime(new Date());
+            
+            const botNameInput = document.getElementById('botNameInput');
+            const botPictureUrl = document.getElementById('botPictureUrl');
+            
+            if (info.displayName) {
+                botNameInput.value = info.displayName;
+                botNameInput.classList.add('auto-fill-success');
+                setTimeout(() => {
+                    botNameInput.classList.remove('auto-fill-success');
+                }, 1500);
+            }
+            
+            if (info.pictureUrl) {
+                botPictureUrl.value = info.pictureUrl;
+                botPictureUrl.classList.add('auto-fill-success');
+                setTimeout(() => {
+                    botPictureUrl.classList.remove('auto-fill-success');
+                }, 1500);
+            }
+        }
+
+        // =============================================
         // LINE Notification Functions
         // =============================================
         async function sendLineNotification(borrowId, type, data) {
@@ -4080,6 +4190,7 @@
                 
             } catch (error) {
                 console.error('App Initialization Error:', error);
+                hideLoading();
             }
         }
 
